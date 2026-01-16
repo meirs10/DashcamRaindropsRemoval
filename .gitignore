@@ -1,0 +1,198 @@
+# =======================
+# DASHCAM RAINDROP REMOVAL PROJECT
+# .gitignore
+# =======================
+
+# =======================
+# DATA DIRECTORIES (LARGE FILES)
+# =======================
+# Raw data - original dashcam images and depth maps
+data/
+!data/.gitkeep
+
+# Processed/degraded images
+data_after_crapification/
+!data_after_crapification/.gitkeep
+
+# Temporary processing directories
+temp_pipeline/
+temp_inspection/
+temp_*/
+
+# Video outputs
+videos/
+!videos/.gitkeep
+
+# =======================
+# EXTERNAL DEPENDENCIES
+# =======================
+# Rain rendering textures (3rd party)
+rain-rendering/3rdparty/
+rain-rendering/rainstreakdb/
+
+# =======================
+# PYTHON
+# =======================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =======================
+# PYTORCH / DEEP LEARNING
+# =======================
+# Model checkpoints
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+
+# Training logs
+logs/
+runs/
+tensorboard/
+wandb/
+
+# =======================
+# PROGRESS/CONFIG FILES
+# =======================
+# Progress tracking (can be regenerated)
+pipeline_progress.json
+*_progress.json
+
+# Scene configurations (can be regenerated from code with seed=42)
+# Uncomment if you want to commit these:
+# scene_intensity_configs.json
+
+# =======================
+# IDE / EDITOR
+# =======================
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# =======================
+# OS FILES
+# =======================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# =======================
+# TEMPORARY FILES
+# =======================
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# =======================
+# IMAGE/VIDEO PROCESSING
+# =======================
+# Backup images
+*.bak
+*_backup.*
+*_old.*
+
+# Temporary image processing
+temp_*.png
+temp_*.jpg
+temp_*.jpeg
+
+# =======================
+# MISC
+# =======================
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Documentation builds
+docs/_build/

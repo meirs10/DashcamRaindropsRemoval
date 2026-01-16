@@ -1,0 +1,608 @@
+{
+  "scene_001": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_002": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_003": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_004": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_005": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_006": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_007": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_008": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_009": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_010": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_011": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_012": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_013": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_014": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_015": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "baseline"
+  },
+  "scene_078": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_074": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "droplet-focused"
+  },
+  "scene_055": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "droplet-focused"
+  },
+  "scene_046": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "extreme",
+    "group": "droplet-focused"
+  },
+  "scene_065": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_082": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_101": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "droplet-focused"
+  },
+  "scene_035": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "droplet-focused"
+  },
+  "scene_084": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "extreme",
+    "group": "droplet-focused"
+  },
+  "scene_042": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_089": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_075": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "droplet-focused"
+  },
+  "scene_036": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "droplet-focused"
+  },
+  "scene_072": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "extreme",
+    "group": "droplet-focused"
+  },
+  "scene_031": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_049": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_087": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "droplet-focused"
+  },
+  "scene_100": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "droplet-focused"
+  },
+  "scene_024": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "extreme",
+    "group": "droplet-focused"
+  },
+  "scene_028": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_083": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "droplet-focused"
+  },
+  "scene_052": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_081": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_066": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "medium",
+    "group": "environmental"
+  },
+  "scene_098": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "environmental"
+  },
+  "scene_063": {
+    "fog": "heavy",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_017": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_056": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_057": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "medium",
+    "group": "environmental"
+  },
+  "scene_059": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "environmental"
+  },
+  "scene_048": {
+    "fog": "heavy",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_039": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_034": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_061": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "medium",
+    "group": "environmental"
+  },
+  "scene_090": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "environmental"
+  },
+  "scene_023": {
+    "fog": "heavy",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_050": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_093": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_018": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "medium",
+    "group": "environmental"
+  },
+  "scene_032": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "heavy",
+    "group": "environmental"
+  },
+  "scene_054": {
+    "fog": "heavy",
+    "rain": "medium",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_058": {
+    "fog": "heavy",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "environmental"
+  },
+  "scene_038": {
+    "fog": "medium",
+    "rain": "medium",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_062": {
+    "fog": "light",
+    "rain": "light",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_040": {
+    "fog": "heavy",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_021": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_022": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "heavy",
+    "group": "mixed-severity"
+  },
+  "scene_068": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_079": {
+    "fog": "medium",
+    "rain": "medium",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_094": {
+    "fog": "light",
+    "rain": "light",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_025": {
+    "fog": "heavy",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_077": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_037": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "heavy",
+    "group": "mixed-severity"
+  },
+  "scene_086": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_060": {
+    "fog": "medium",
+    "rain": "medium",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_026": {
+    "fog": "light",
+    "rain": "light",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_076": {
+    "fog": "heavy",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_064": {
+    "fog": "light",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_016": {
+    "fog": "medium",
+    "rain": "light",
+    "droplets": "heavy",
+    "group": "mixed-severity"
+  },
+  "scene_071": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_067": {
+    "fog": "medium",
+    "rain": "medium",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_095": {
+    "fog": "light",
+    "rain": "light",
+    "droplets": "light",
+    "group": "mixed-severity"
+  },
+  "scene_053": {
+    "fog": "heavy",
+    "rain": "light",
+    "droplets": "medium",
+    "group": "mixed-severity"
+  },
+  "scene_073": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_096": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_069": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_041": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_088": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_080": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_045": {
+    "fog": "medium",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_043": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_092": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_099": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_020": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_070": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_091": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_027": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_085": {
+    "fog": "medium",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_029": {
+    "fog": "none",
+    "rain": "medium",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_033": {
+    "fog": "heavy",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_044": {
+    "fog": "none",
+    "rain": "heavy",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_047": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  },
+  "scene_051": {
+    "fog": "light",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_019": {
+    "fog": "none",
+    "rain": "light",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_030": {
+    "fog": "none",
+    "rain": "none",
+    "droplets": "light",
+    "group": "edge-case"
+  },
+  "scene_097": {
+    "fog": "medium",
+    "rain": "none",
+    "droplets": "heavy",
+    "group": "edge-case"
+  }
+}
