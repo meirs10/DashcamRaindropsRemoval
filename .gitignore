@@ -196,3 +196,7 @@ temp_*.jpeg
 
 # Documentation builds
 docs/_build/
+
+#other
+
+test_results
