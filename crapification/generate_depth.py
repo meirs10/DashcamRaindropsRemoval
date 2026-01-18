@@ -123,7 +123,7 @@ def generate_depth_for_scene(scene_name, angle, base_dir):
 
 def main():
     """Standalone mode - generate depth for specific scene"""
-    project_root = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
+    project_root = Path(r"/")
 
     print("\n=== DEPTH MAP GENERATION ===\n")
 

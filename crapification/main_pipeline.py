@@ -4,10 +4,10 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
-from crapification_stages.stage_fog import run_fog_stage
-from crapification_stages.stage_rain_masks import run_rain_mask_stage
-from crapification_stages.stage_composite import run_composite_stage
-from crapification_stages.stage_droplets import run_droplet_stage
+from crapification.stage_fog import run_fog_stage
+from crapification.stage_rain_masks import run_rain_mask_stage
+from crapification.stage_composite import run_composite_stage
+from crapification.stage_droplets import run_droplet_stage
 from generate_depth import generate_depth_for_scene
 from scene_configurations import generate_scene_configurations, load_configurations, save_configurations, \
     print_configuration_summary

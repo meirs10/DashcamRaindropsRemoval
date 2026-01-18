@@ -162,7 +162,7 @@ if __name__ == "__main__":
     configs = generate_scene_configurations(num_scenes=101, seed=42)
 
     # Save to file
-    base_dir = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
+    base_dir = Path(r"/")
     config_file = base_dir / "scene_intensity_configs.json"
     save_configurations(configs, config_file)
 

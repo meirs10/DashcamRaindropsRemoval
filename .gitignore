@@ -118,7 +118,7 @@ wandb/
 # PROGRESS/CONFIG FILES
 # =======================
 # Progress tracking (can be regenerated)
-pipeline_progress.json
+crapification/pipeline_progress.json
 *_progress.json
 
 # Scene configurations (can be regenerated from code with seed=42)
