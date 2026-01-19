@@ -24,11 +24,12 @@ CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 # Hyperparameters
 BATCH_SIZE = 1
-NUM_EPOCHS = 50
+MAX_EPOCHS = 50
 LEARNING_RATE = 1e-4
 FRAMES_PER_CLIP = 5
 IMG_SIZE = (540, 960)  # Half resolution (16:9)
 NUM_WORKERS = 4
+EARLY_STOPPING_PATIENCE = 16
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -104,7 +105,15 @@ def main():
 
     # Optimizer and scheduler
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=LEARNING_RATE)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.5,
+        patience=7,
+        threshold=1e-4, # Improvement of 0.01%
+        threshold_mode="rel",
+        verbose=True
+    )
 
     # Mixed precision scaler - FIXED!
     scaler = GradScaler('cuda')
@@ -117,7 +126,9 @@ def main():
     print("STARTING TRAINING")
     print("=" * 60 + "\n")
 
-    for epoch in range(NUM_EPOCHS):
+    patience_counter = 0
+
+    for epoch in range(MAX_EPOCHS):
         epoch_start = time.time()
 
         # ==================== TRAINING ====================
@@ -144,7 +155,7 @@ def main():
 
             # Log detailed losses every 10 batches
             if (batch_idx + 1) % 10 == 0:
-                print(f"Epoch [{epoch + 1}/{NUM_EPOCHS}] Batch [{batch_idx + 1}/{len(train_loader)}]")
+                print(f"Epoch [{epoch + 1}/{MAX_EPOCHS}] Batch [{batch_idx + 1}/{len(train_loader)}]")
                 print(f"  Total: {loss_dict['total']:.4f} | "
                       f"Pixel: {loss_dict['pixel']:.4f} | "
                       f"SSIM: {loss_dict['ssim']:.4f} | "
@@ -179,7 +190,7 @@ def main():
 
         # Print epoch summary
         print(f"\n{'=' * 60}")
-        print(f"Epoch [{epoch + 1}/{NUM_EPOCHS}] Complete")
+        print(f"Epoch [{epoch + 1}/{MAX_EPOCHS}] Complete")
         print(f"{'=' * 60}")
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss:   {val_loss:.4f}")
@@ -202,11 +213,18 @@ def main():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            patience_counter = 0
             torch.save(checkpoint, CHECKPOINT_DIR / 'best.pth')
             print(f"✓ New best model saved! Val Loss: {val_loss:.4f}\n")
+        else:
+            patience_counter += 1
 
         if (epoch + 1) % 10 == 0:
             torch.save(checkpoint, CHECKPOINT_DIR / f'epoch_{epoch + 1}.pth')
+
+        if patience_counter >= EARLY_STOPPING_PATIENCE:
+            print("Early stopping triggered")
+            break
 
     print("\n" + "=" * 60)
     print("TRAINING COMPLETE!")
