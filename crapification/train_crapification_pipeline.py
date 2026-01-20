@@ -40,7 +40,7 @@ CONFIG_FILE = Path(__file__).parent / "scene_intensity_configs.json"
 SPLIT_FILE = Path(__file__).parent / "scene_split.json"
 PROGRESS_FILE = Path(__file__).parent / "pipeline_progress.json"
 
-TEXTURE_DIR = BASE / "rain-rendering" / "3rdparty" / "rainstreakdb"
+TEXTURE_DIR = BASE / "rain-rendering" / "rainstreakdb"
 
 # Camera angles
 ANGLES = [

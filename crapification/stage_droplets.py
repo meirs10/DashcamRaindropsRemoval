@@ -41,14 +41,14 @@ def add_camera_sensor_water_gpu(
         seed=None,
         n_large_bokeh=22,
         n_medium_bokeh=35,
-        droplet_positions=None  # NEW: pre-defined positions
+        droplet_positions=None  # Pre-defined STATIC positions
 ):
     """
     GPU-accelerated water effects
 
     Args:
-        droplet_positions: If provided, use these positions instead of random
-                          Format: list of (cx, cy, radius, opacity, sigma_factor, brightness)
+        droplet_positions: If provided, use these EXACT positions (no randomness)
+                          Format: list of (cx, cy, radius, opacity, sigma_factor, brightness, is_large)
     """
     if seed is not None and droplet_positions is None:
         np.random.seed(seed)
@@ -71,7 +71,7 @@ def add_camera_sensor_water_gpu(
         indexing='ij'
     )
 
-    # NEW: If positions provided, use them
+    # If positions provided, use EXACT same positions
     if droplet_positions is not None:
         for (cx, cy, radius, opacity, sigma_factor, brightness, is_large) in droplet_positions:
             dist = torch.sqrt((x_grid - cx) ** 2 + (y_grid - cy) ** 2)
@@ -83,7 +83,7 @@ def add_camera_sensor_water_gpu(
             result = result * (1 - circle_3ch) + blur_to_use * brightness * circle_3ch
 
     else:
-        # ORIGINAL: Random positions
+        # Random positions (training mode)
         # Large bokeh
         for _ in range(n_large_bokeh):
             cx = np.random.randint(int(w * 0.05), int(w * 0.95))
@@ -124,92 +124,43 @@ def add_camera_sensor_water_gpu(
     return result_np
 
 
-def generate_persistent_droplet_positions(h, w, n_large, n_medium, seed, num_frames):
+def generate_static_droplet_positions(h, w, n_large, n_medium, seed):
     """
-    Generate droplet positions that slowly evolve over frames
+    Generate STATIC droplet positions that DON'T CHANGE across frames
 
     Returns:
-        List of frame_positions, where each is a list of
-        (cx, cy, radius, opacity, sigma_factor, brightness, is_large)
+        List of (cx, cy, radius, opacity, sigma_factor, brightness, is_large)
+        These positions are used for ALL frames - droplets stay in exact same spot!
     """
     np.random.seed(seed)
 
-    # Initialize droplets
-    droplets = []
+    positions = []
 
-    # Large droplets
+    # Large droplets - FIXED positions
     for _ in range(n_large):
-        droplets.append({
-            'cx': np.random.randint(int(w * 0.05), int(w * 0.95)),
-            'cy': np.random.randint(int(h * 0.05), int(h * 0.95)),
-            'radius': np.random.uniform(80, 180),
-            'opacity': np.random.uniform(0.85, 1.0),
-            'sigma_factor': np.random.uniform(0.35, 0.45),
-            'brightness': np.random.uniform(1.25, 1.55),
-            'is_large': True,
-            'vx': np.random.uniform(-0.5, 0.5),  # velocity
-            'vy': np.random.uniform(0.5, 2.0),  # gravity
-            'age': 0
-        })
+        positions.append((
+            float(np.random.randint(int(w * 0.05), int(w * 0.95))),  # cx - FIXED
+            float(np.random.randint(int(h * 0.05), int(h * 0.95))),  # cy - FIXED
+            float(np.random.uniform(80, 180)),  # radius - FIXED
+            float(np.random.uniform(0.85, 1.0)),  # opacity - FIXED
+            float(np.random.uniform(0.35, 0.45)),  # sigma - FIXED
+            float(np.random.uniform(1.25, 1.55)),  # brightness - FIXED
+            True  # is_large
+        ))
 
-    # Medium droplets
+    # Medium droplets - FIXED positions
     for _ in range(n_medium):
-        droplets.append({
-            'cx': np.random.randint(0, w),
-            'cy': np.random.randint(0, h),
-            'radius': np.random.uniform(40, 95),
-            'opacity': np.random.uniform(0.8, 1.0),
-            'sigma_factor': np.random.uniform(0.32, 0.42),
-            'brightness': np.random.uniform(1.2, 1.4),
-            'is_large': False,
-            'vx': np.random.uniform(-0.3, 0.3),
-            'vy': np.random.uniform(0.3, 1.5),
-            'age': 0
-        })
+        positions.append((
+            float(np.random.randint(0, w)),  # cx - FIXED
+            float(np.random.randint(0, h)),  # cy - FIXED
+            float(np.random.uniform(40, 95)),  # radius - FIXED
+            float(np.random.uniform(0.8, 1.0)),  # opacity - FIXED
+            float(np.random.uniform(0.32, 0.42)),  # sigma - FIXED
+            float(np.random.uniform(1.2, 1.4)),  # brightness - FIXED
+            False  # is_large
+        ))
 
-    # Generate positions for each frame
-    all_frame_positions = []
-
-    for frame_idx in range(num_frames):
-        frame_positions = []
-
-        for drop in droplets:
-            # Age droplet
-            drop['age'] += 1
-
-            # Update position (slow movement)
-            drop['cx'] += drop['vx']
-            drop['cy'] += drop['vy']
-
-            # Slowly change size/opacity
-            drop['radius'] += np.random.uniform(-0.3, 0.2)
-            drop['opacity'] += np.random.uniform(-0.01, 0.01)
-            drop['opacity'] = np.clip(drop['opacity'], 0.5, 1.0)
-
-            # If droplet goes off screen or too old, respawn
-            if drop['cy'] > h or drop['age'] > 120:
-                drop['cx'] = float(np.random.randint(50, w - 50))
-                drop['cy'] = float(np.random.randint(0, int(h * 0.3)))
-                drop['radius'] = np.random.uniform(80, 180) if drop['is_large'] else np.random.uniform(40, 95)
-                drop['age'] = 0
-
-            if drop['cx'] < 0 or drop['cx'] > w:
-                drop['cx'] = float(np.random.randint(50, w - 50))
-
-            # Add to frame
-            frame_positions.append((
-                float(drop['cx']),
-                float(drop['cy']),
-                float(drop['radius']),
-                float(drop['opacity']),
-                float(drop['sigma_factor']),
-                float(drop['brightness']),
-                drop['is_large']
-            ))
-
-        all_frame_positions.append(frame_positions)
-
-    return all_frame_positions
+    return positions
 
 
 def run_droplet_stage(
@@ -219,18 +170,18 @@ def run_droplet_stage(
         seed=None,
         intensity='heavy',
         use_gpu=True,
-        persistent=False  # NEW!
+        persistent=False
 ):
     """
-    Fast camera sensor water with optional GPU acceleration.
+    Apply camera sensor water droplets
 
     Args:
-        persistent (bool): If True, droplets persist and evolve across frames
-                          If False, droplets change randomly (default)
+        persistent (bool): If True, droplets stay in EXACT same positions across ALL frames
+                          If False, droplets randomize per frame (training mode)
     """
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    # Check GPU availability
+    # Check GPU
     if use_gpu and torch.cuda.is_available():
         device = 'cuda'
         print(f"    🚀 Using GPU: {torch.cuda.get_device_name(0)}")
@@ -244,50 +195,37 @@ def run_droplet_stage(
     )
 
     configs = {
-        'light': {
-            'n_large_bokeh': 10,
-            'n_medium_bokeh': 18
-        },
-        'medium': {
-            'n_large_bokeh': 16,
-            'n_medium_bokeh': 28
-        },
-        'heavy': {
-            'n_large_bokeh': 28,
-            'n_medium_bokeh': 45
-        },
-        'extreme': {
-            'n_large_bokeh': 40,
-            'n_medium_bokeh': 60
-        }
+        'light': {'n_large_bokeh': 10, 'n_medium_bokeh': 18},
+        'medium': {'n_large_bokeh': 16, 'n_medium_bokeh': 28},
+        'heavy': {'n_large_bokeh': 28, 'n_medium_bokeh': 45},
+        'extreme': {'n_large_bokeh': 40, 'n_medium_bokeh': 60}
     }
 
     config = configs.get(intensity, configs['heavy'])
 
-    mode_str = "PERSISTENT" if persistent else "RANDOM"
-    print(f"    Applying camera sensor water - {intensity} - {mode_str} ({len(files)} frames)")
+    mode_str = "PERSISTENT (STATIC)" if persistent else "RANDOM"
+    print(f"    Applying droplets - {intensity} - {mode_str} ({len(files)} frames)")
 
     base_seed = np.random.randint(0, 10_000) if seed is None else seed
 
-    # NEW: Generate persistent positions if needed
+    # Generate STATIC positions ONCE if persistent
     if persistent:
-        # Load first image to get dimensions
+        # Get dimensions from first image
         first_img = cv2.imread(os.path.join(input_dir, files[0]))
         h, w = first_img.shape[:2]
 
-        print(f"    Generating persistent droplet trajectories...")
-        all_frame_positions = generate_persistent_droplet_positions(
+        print(f"    Generating STATIC droplet positions...")
+        static_positions = generate_static_droplet_positions(
             h, w,
             config['n_large_bokeh'],
             config['n_medium_bokeh'],
-            base_seed,
-            len(files)
+            base_seed
         )
-        print(f"    ✓ Generated {len(all_frame_positions[0])} persistent droplets")
+        print(f"    ✓ Generated {len(static_positions)} droplets (will stay in same spots)")
     else:
-        all_frame_positions = None
+        static_positions = None
 
-    # Process frames
+    # Process ALL frames
     for i, fname in enumerate(files):
         img_path = os.path.join(input_dir, fname)
         img_bgr = cv2.imread(img_path)
@@ -297,21 +235,20 @@ def run_droplet_stage(
         img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
         if persistent:
-            # Use pre-generated positions for this frame
-            droplet_positions = all_frame_positions[i]
+            # Use SAME positions for EVERY frame
             result = add_camera_sensor_water_gpu(
                 img,
                 device=device,
-                seed=None,  # Don't need seed, using positions
-                droplet_positions=droplet_positions
+                seed=None,
+                droplet_positions=static_positions  # ← SAME for all frames!
             )
         else:
-            # ORIGINAL: Random per frame (with some temporal coherence)
+            # Random per frame (training mode)
             var = {k: max(0, v + np.random.randint(-3, 4)) for k, v in config.items()}
             result = add_camera_sensor_water_gpu(
                 img,
                 device=device,
-                seed=base_seed + i // 4,  # Change seed every 4 frames
+                seed=base_seed + i // 4,
                 **var
             )
 
@@ -321,18 +258,17 @@ def run_droplet_stage(
         )
 
         if (i + 1) % 10 == 0 or (i + 1) == len(files):
-            print(f"    Water: {i + 1}/{len(files)}")
+            print(f"    Droplets: {i + 1}/{len(files)}")
 
-    print(f"    ✓ Sensor water complete ({mode_str}).")
+    print(f"    ✓ Droplets complete ({mode_str})")
 
 
 if __name__ == "__main__":
     run_droplet_stage(
-        input_dir="path/to/clear/images",
-        output_dir="path/to/output/water",
-        mask_dir=None,
+        input_dir="path/to/input",
+        output_dir="path/to/output",
         seed=42,
         intensity='heavy',
         use_gpu=True,
-        persistent=False  # Set to True for test set!
+        persistent=True  # ← STATIC droplets!
     )
