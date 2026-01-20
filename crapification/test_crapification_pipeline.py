@@ -29,7 +29,7 @@ from crapification.scene_configurations import load_configurations
 # =======================
 
 DATA_DIR = BASE / "data"
-OUTPUT_BASE = BASE / "data_realistic_test"
+OUTPUT_BASE = BASE / "test_data_after_crapification"
 
 # Configs inside crapification folder
 CONFIG_FILE = Path(__file__).parent / "scene_intensity_configs.json"

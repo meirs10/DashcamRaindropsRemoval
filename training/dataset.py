@@ -303,7 +303,7 @@ if __name__ == "__main__":
     print("Creating test dataset...")
     test_dataset = RainRemovalDataset(
         clean_base_dir=BASE / "data",
-        rainy_base_dir=BASE / "data_realistic_test",  # Different dir!
+        rainy_base_dir=BASE / "test_data_after_crapification",  # Different dir!
         num_scenes=101,
         frames_per_clip=8,
         img_size=(540, 960),
