@@ -92,7 +92,7 @@ def main():
         alpha=1.0,  # Charbonnier (pixel fidelity)
         beta=0.2,  # SSIM (structural similarity)
         gamma=0.1,  # Edge preservation
-        delta=0.5,  # Temporal consistency
+        delta=0.0,  # Temporal consistency
         epsilon=0.1  # Perceptual (VGG-based)
     ).to(device)  # ← CRITICAL FIX!
 
