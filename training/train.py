@@ -23,7 +23,7 @@ CHECKPOINT_DIR = BASE / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 # Hyperparameters
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 MAX_EPOCHS = 50
 LEARNING_RATE = 1e-4
 FRAMES_PER_CLIP = 5
@@ -111,8 +111,7 @@ def main():
         factor=0.5,
         patience=7,
         threshold=1e-4, # Improvement of 0.01%
-        threshold_mode="rel",
-        verbose=True
+        threshold_mode="rel"
     )
 
     # Mixed precision scaler - FIXED!
@@ -203,6 +202,8 @@ def main():
             'epoch': epoch + 1,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'scaler_state_dict': scaler.state_dict(),
             'train_loss': train_loss,
             'val_loss': val_loss,
             'train_losses': train_losses,

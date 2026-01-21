@@ -101,12 +101,12 @@ venv.bak/
 # PYTORCH / DEEP LEARNING
 # =======================
 # Model checkpoints
-checkpoints/
-*.pth
-*.pt
-*.ckpt
-*.h5
-*.pkl
+#checkpoints/
+#*.pth
+#*.pt
+#*.ckpt
+#*.h5
+#*.pkl
 
 # Training logs
 logs/
@@ -199,4 +199,4 @@ docs/_build/
 
 #other
 test_data_after_crapification
-test_results
+#test_results
