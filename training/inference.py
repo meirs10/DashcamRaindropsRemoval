@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 # Add training folder to path
-BASE = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
+BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE / "training"))
 
 from model import MobileNetV3UNetConvLSTMVideo

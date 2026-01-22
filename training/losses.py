@@ -320,10 +320,12 @@ class CombinedVideoLoss(nn.Module):
             total_loss: scalar tensor
             loss_dict: dictionary with individual loss components
         """
-        loss_pixel = self.charbonnier(pred, target)
-        loss_ssim = self.ssim(pred, target)
-        loss_edge = self.edge(pred, target)
-        loss_temp = self.temporal(pred, target)
+        zero = pred.new_tensor(0.0)
+
+        loss_pixel = self.charbonnier(pred, target) if self.alpha != 0.0 else zero
+        loss_ssim = self.ssim(pred, target) if self.beta != 0.0 else zero
+        loss_edge = self.edge(pred, target) if self.gamma != 0.0 else zero
+        loss_temp = self.temporal(pred, target) if self.delta != 0.0 else zero
 
         total_loss = (
                 self.alpha * loss_pixel +
@@ -340,7 +342,7 @@ class CombinedVideoLoss(nn.Module):
         }
 
         # Add perceptual loss if enabled
-        if self.perceptual is not None:
+        if self.perceptual is not None and self.epsilon != 0.0:
             loss_perc = self.perceptual(pred, target)
             total_loss += self.epsilon * loss_perc
             loss_dict['perceptual'] = loss_perc.item()

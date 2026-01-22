@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-BASE = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
+BASE = Path(__file__).parent.parent
 CHECKPOINT_PATH = BASE / "checkpoints" / "latest.pth"
 
 checkpoint = torch.load(CHECKPOINT_PATH, map_location='cpu')
