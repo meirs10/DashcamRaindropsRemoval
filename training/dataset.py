@@ -28,6 +28,7 @@ class RainRemovalDataset(Dataset):
                  rainy_base_dir,
                  num_scenes=101,
                  frames_per_clip=8,
+                 consecutive_frames=True,
                  img_size=(540, 960),
                  split='train',
                  train_ratio=0.8,
@@ -49,6 +50,7 @@ class RainRemovalDataset(Dataset):
         self.clean_base = Path(clean_base_dir)
         self.rainy_base = Path(rainy_base_dir)
         self.frames_per_clip = frames_per_clip
+        self.consecutive_frames = consecutive_frames
         self.img_size = img_size
         self.split = split
 
@@ -186,23 +188,42 @@ class RainRemovalDataset(Dataset):
         clean_files = sorted(list(clean_dir.glob('*.jpeg')))
         rainy_files = sorted(list(rainy_dir.glob('*.jpeg')))
 
-        # Randomly select starting frame (if more frames than needed)
-        if num_frames > self.frames_per_clip:
-            start_idx = random.randint(0, num_frames - self.frames_per_clip)
-        else:
-            start_idx = 0
+        # -----------------------------------------
+        # Choose frame indices
+        # -----------------------------------------
+        if self.consecutive_frames:
+            # Original behavior: a consecutive clip
+            if num_frames > self.frames_per_clip:
+                start_idx = random.randint(0, num_frames - self.frames_per_clip)
+            else:
+                start_idx = 0
 
-        # Load consecutive frames
+            frame_indices = list(range(start_idx, start_idx + self.frames_per_clip))
+
+        else:
+            # New behavior: pick self.frames_per_clip RANDOM frames
+            if num_frames >= self.frames_per_clip:
+                # Sample distinct frame indices, then sort to keep temporal order
+                frame_indices = sorted(
+                    random.sample(range(num_frames), self.frames_per_clip)
+                )
+            else:
+                # Fewer frames than requested: sample with replacement
+                frame_indices = sorted(
+                    random.choices(range(num_frames), k=self.frames_per_clip)
+                )
+
+            # -----------------------------------------
+            # Load selected frames
+            # -----------------------------------------
         rainy_frames = []
         clean_frames = []
 
-        for i in range(start_idx, start_idx + self.frames_per_clip):
-            # Load rainy frame
-            rainy_frame = self.load_frame(rainy_files[i])
+        for idx in frame_indices:
+            rainy_frame = self.load_frame(rainy_files[idx])
             rainy_frames.append(rainy_frame)
 
-            # Load clean frame
-            clean_frame = self.load_frame(clean_files[i])
+            clean_frame = self.load_frame(clean_files[idx])
             clean_frames.append(clean_frame)
 
         # Stack frames into video tensors (T, C, H, W)

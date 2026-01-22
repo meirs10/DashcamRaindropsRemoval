@@ -205,3 +205,86 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
             outputs.append(out_frame.unsqueeze(1))
 
         return torch.cat(outputs, dim=1)
+
+
+# ======================
+# Model without convLSTM layer
+# ======================
+class MobileNetV3UNetVideo(nn.Module):
+    """
+    Video model without temporal recurrence.
+    Processes each frame independently with a MobileNetV3 encoder + U-Net decoder.
+    """
+
+    def __init__(self,
+                 hidden_dim: int = 96,
+                 out_channels: int = 3,
+                 use_pretrained_encoder: bool = True,
+                 freeze_encoder: bool = True):
+        super().__init__()
+        self.encoder = MobileNetV3Encoder(pretrained=use_pretrained_encoder)
+
+        if freeze_encoder:
+            self.freeze_encoder()
+
+        # Same bottleneck projection as in the ConvLSTM version,
+        # but we feed it directly to the decoder (no ConvLSTM in between).
+        self.bottleneck_proj = nn.LazyConv2d(hidden_dim, kernel_size=1)
+        self.decoder = UNetDecoder(out_channels=out_channels)
+
+    def freeze_encoder(self):
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        print("✓ Encoder frozen")
+
+    def unfreeze_encoder(self):
+        for param in self.encoder.parameters():
+            param.requires_grad = True
+        print("✓ Encoder unfrozen")
+
+    def get_trainable_params(self):
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        total = sum(p.numel() for p in self.parameters())
+        frozen = total - trainable
+        return {
+            'trainable': trainable,
+            'frozen': frozen,
+            'total': total,
+            'trainable_pct': 100 * trainable / total if total > 0 else 0
+        }
+
+    def print_param_summary(self):
+        stats = self.get_trainable_params()
+        print("\n" + "=" * 60)
+        print("MODEL PARAMETER SUMMARY")
+        print("=" * 60)
+        print(f"Trainable parameters: {stats['trainable']:,}")
+        print(f"Frozen parameters:    {stats['frozen']:,}")
+        print(f"Total parameters:     {stats['total']:,}")
+        print(f"Trainable %:          {stats['trainable_pct']:.1f}%")
+        print("=" * 60 + "\n")
+
+    def forward(self, x):
+        """
+        x: (B, T, C, H, W)
+        returns: (B, T, out_channels, H, W)
+        """
+        B, T, C, H, W = x.shape
+        outputs = []
+
+        # Grad enabled only if encoder is trainable
+        encoder_has_trainable = any(p.requires_grad for p in self.encoder.parameters())
+        for t in range(T):
+            frame = x[:, t]  # (B, C, H, W)
+
+            with torch.set_grad_enabled(self.encoder.training and encoder_has_trainable):
+                enc_feats = self.encoder(frame)
+
+            f1, f2, f3, f4 = enc_feats
+            bottleneck = self.bottleneck_proj(f4)  # (B, hidden_dim, h_b, w_b)
+
+            # No temporal state: just decode this frame
+            out_frame = self.decoder(bottleneck, enc_feats, out_size=(H, W))
+            outputs.append(out_frame.unsqueeze(1))  # (B, 1, C_out, H, W)
+
+        return torch.cat(outputs, dim=1)  # (B, T, C_out, H, W)

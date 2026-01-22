@@ -44,7 +44,7 @@ rainy_files = sorted(list(RAINY_DIR.glob('*.jpeg')))[:8]
 clean_files = sorted(list(CLEAN_DIR.glob('*.jpeg')))[:8]
 
 
-def load_frame(path, size=(256, 256)):
+def load_frame(path, size=(960, 540)):
     img = cv2.imread(str(path))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, size)

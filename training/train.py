@@ -11,8 +11,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler  # FIXED
 import time
-
-from model import MobileNetV3UNetConvLSTMVideo
+from model import MobileNetV3UNetVideo
 from dataset import RainRemovalDataset
 from losses import CombinedVideoLoss
 
@@ -44,6 +43,7 @@ def main():
         rainy_base_dir=RAINY_DATA,
         num_scenes=101,
         frames_per_clip=FRAMES_PER_CLIP,
+        consecutive_frames=False,
         img_size=IMG_SIZE,
         split='train',
         train_ratio=0.8
@@ -54,6 +54,7 @@ def main():
         rainy_base_dir=RAINY_DATA,
         num_scenes=101,
         frames_per_clip=FRAMES_PER_CLIP,
+        consecutive_frames=False,
         img_size=IMG_SIZE,
         split='val',
         train_ratio=0.8
@@ -69,7 +70,7 @@ def main():
 
     # Model
     print("\nInitializing model...")
-    model = MobileNetV3UNetConvLSTMVideo(
+    model = MobileNetV3UNetVideo(
         hidden_dim=96,
         out_channels=3,
         use_pretrained_encoder=True,
