@@ -1,4 +1,15 @@
 # training/model.py
+"""
+Model definition for video rain removal.
+
+- MobileNetV3 encoder (pretrained on ImageNet).
+- U-Net style decoder.
+- ConvLSTM bottleneck for temporal modeling.
+- Encoder can be fully frozen, including BatchNorm running stats.
+"""
+
+from typing import Dict
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,8 +28,12 @@ class ConvLSTMCell(nn.Module):
         super().__init__()
         self.hidden_dim = hidden_dim
         padding = kernel_size // 2
-        self.conv = nn.LazyConv2d(4 * hidden_dim, kernel_size=kernel_size,
-                                  padding=padding, bias=bias)
+        self.conv = nn.LazyConv2d(
+            4 * hidden_dim,
+            kernel_size=kernel_size,
+            padding=padding,
+            bias=bias,
+        )
 
     def forward(self, x, state=None):
         """
@@ -62,6 +77,10 @@ class MobileNetV3Encoder(nn.Module):
         self.stage_indices = self._compute_stage_indices()
 
     def _compute_stage_indices(self):
+        """
+        Run a dummy tensor through the feature extractor and record
+        indices where spatial resolution changes. Keep last 4.
+        """
         indices = []
         with torch.no_grad():
             x = torch.zeros(1, 3, 224, 224)
@@ -77,6 +96,10 @@ class MobileNetV3Encoder(nn.Module):
         return indices
 
     def forward(self, x):
+        """
+        x: (B, 3, H, W)
+        returns: list of 4 feature maps from shallow -> deep.
+        """
         feats = []
         h = x
         for i, layer in enumerate(self.features):
@@ -88,7 +111,7 @@ class MobileNetV3Encoder(nn.Module):
 
 
 # ======================
-# U-Net decoder
+# U-Net decoder blocks
 # ======================
 class UpBlock(nn.Module):
     def __init__(self, out_channels: int):
@@ -100,7 +123,10 @@ class UpBlock(nn.Module):
         self.act = nn.ReLU(inplace=True)
 
     def forward(self, x, skip):
-        x = F.interpolate(x, size=skip.shape[-2:], mode="bilinear", align_corners=False)
+        # upsample bottleneck to match skip size
+        x = torch.nn.functional.interpolate(
+            x, size=skip.shape[-2:], mode="bilinear", align_corners=False
+        )
         x = torch.cat([x, skip], dim=1)
         x = self.act(self.bn1(self.conv1(x)))
         x = self.act(self.bn2(self.conv2(x)))
@@ -117,7 +143,7 @@ class UNetDecoder(nn.Module):
             nn.LazyConv2d(16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
-            nn.LazyConv2d(out_channels, kernel_size=1)
+            nn.LazyConv2d(out_channels, kernel_size=1),
         )
 
     def forward(self, bottleneck, enc_feats, out_size):
@@ -126,22 +152,58 @@ class UNetDecoder(nn.Module):
         x = self.up2(x, f2)
         x = self.up1(x, f1)
         x = self.final_conv(x)
-        x = F.interpolate(x, size=out_size, mode="bilinear", align_corners=False)
+        x = torch.nn.functional.interpolate(
+            x, size=out_size, mode="bilinear", align_corners=False
+        )
         return x
 
 
 # ======================
-# Full model
+# Helpers for freezing encoder
+# ======================
+def _freeze_encoder_module(encoder: nn.Module):
+    """
+    Freeze all encoder parameters and BatchNorm running stats.
+    """
+    for p in encoder.parameters():
+        p.requires_grad = False
+    encoder.eval()
+    for m in encoder.modules():
+        if isinstance(m, nn.BatchNorm2d):
+            m.eval()
+
+
+def _unfreeze_encoder_module(encoder: nn.Module):
+    """
+    Unfreeze encoder parameters (BatchNorm state will then follow train/eval).
+    """
+    for p in encoder.parameters():
+        p.requires_grad = True
+    # encoder.train()/eval() will be controlled by outer model.train()
+
+
+# ======================
+# Full model with ConvLSTM
 # ======================
 class MobileNetV3UNetConvLSTMVideo(nn.Module):
-    def __init__(self,
-                 hidden_dim: int = 96,
-                 out_channels: int = 3,
-                 use_pretrained_encoder: bool = True,
-                 freeze_encoder: bool = True):
+    """
+    Encoder–ConvLSTM–Decoder video model.
+
+    Input:  x of shape (B, T, 3, H, W)
+    Output: y of shape (B, T, 3, H, W)
+    """
+
+    def __init__(
+        self,
+        hidden_dim: int = 96,
+        out_channels: int = 3,
+        use_pretrained_encoder: bool = True,
+        freeze_encoder: bool = True,
+    ):
         super().__init__()
         self.encoder = MobileNetV3Encoder(pretrained=use_pretrained_encoder)
 
+        self.encoder_frozen = False
         if freeze_encoder:
             self.freeze_encoder()
 
@@ -149,25 +211,37 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
         self.convlstm = ConvLSTMCell(hidden_dim=hidden_dim, kernel_size=3)
         self.decoder = UNetDecoder(out_channels=out_channels)
 
+    # ----- Freezing / unfreezing -----
     def freeze_encoder(self):
-        for param in self.encoder.parameters():
-            param.requires_grad = False
-        print("✓ Encoder frozen")
+        _freeze_encoder_module(self.encoder)
+        self.encoder_frozen = True
+        print("✓ Encoder frozen (weights + BatchNorm running stats)")
 
     def unfreeze_encoder(self):
-        for param in self.encoder.parameters():
-            param.requires_grad = True
+        _unfreeze_encoder_module(self.encoder)
+        self.encoder_frozen = False
         print("✓ Encoder unfrozen")
 
-    def get_trainable_params(self):
+    def train(self, mode: bool = True):
+        """
+        Override nn.Module.train so that when encoder_frozen is True,
+        the encoder (and its BatchNorm) always stays in eval mode.
+        """
+        super().train(mode)
+        if self.encoder_frozen:
+            _freeze_encoder_module(self.encoder)
+        return self
+
+    # ----- Utility: parameter stats -----
+    def get_trainable_params(self) -> Dict[str, float]:
         trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
         total = sum(p.numel() for p in self.parameters())
         frozen = total - trainable
         return {
-            'trainable': trainable,
-            'frozen': frozen,
-            'total': total,
-            'trainable_pct': 100 * trainable / total if total > 0 else 0
+            "trainable": trainable,
+            "frozen": frozen,
+            "total": total,
+            "trainable_pct": 100.0 * trainable / total if total > 0 else 0.0,
         }
 
     def print_param_summary(self):
@@ -181,16 +255,22 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
         print(f"Trainable %:          {stats['trainable_pct']:.1f}%")
         print("=" * 60 + "\n")
 
+    # ----- Forward -----
     def forward(self, x):
+        """
+        x: (B, T, C, H, W)
+        """
         B, T, C, H, W = x.shape
         outputs = []
+
+        encoder_has_trainable = any(p.requires_grad for p in self.encoder.parameters())
         h_state, c_state = None, None
 
         for t in range(T):
-            frame = x[:, t]
+            frame = x[:, t]  # (B, C, H, W)
 
-            with torch.set_grad_enabled(
-                    self.encoder.training and any(p.requires_grad for p in self.encoder.parameters())):
+            # Encoder: if frozen, no grad and BN stats fixed.
+            with torch.set_grad_enabled(self.encoder.training and encoder_has_trainable):
                 enc_feats = self.encoder(frame)
 
             f1, f2, f3, f4 = enc_feats
@@ -205,86 +285,3 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
             outputs.append(out_frame.unsqueeze(1))
 
         return torch.cat(outputs, dim=1)
-
-
-# ======================
-# Model without convLSTM layer
-# ======================
-class MobileNetV3UNetVideo(nn.Module):
-    """
-    Video model without temporal recurrence.
-    Processes each frame independently with a MobileNetV3 encoder + U-Net decoder.
-    """
-
-    def __init__(self,
-                 hidden_dim: int = 96,
-                 out_channels: int = 3,
-                 use_pretrained_encoder: bool = True,
-                 freeze_encoder: bool = True):
-        super().__init__()
-        self.encoder = MobileNetV3Encoder(pretrained=use_pretrained_encoder)
-
-        if freeze_encoder:
-            self.freeze_encoder()
-
-        # Same bottleneck projection as in the ConvLSTM version,
-        # but we feed it directly to the decoder (no ConvLSTM in between).
-        self.bottleneck_proj = nn.LazyConv2d(hidden_dim, kernel_size=1)
-        self.decoder = UNetDecoder(out_channels=out_channels)
-
-    def freeze_encoder(self):
-        for param in self.encoder.parameters():
-            param.requires_grad = False
-        print("✓ Encoder frozen")
-
-    def unfreeze_encoder(self):
-        for param in self.encoder.parameters():
-            param.requires_grad = True
-        print("✓ Encoder unfrozen")
-
-    def get_trainable_params(self):
-        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        total = sum(p.numel() for p in self.parameters())
-        frozen = total - trainable
-        return {
-            'trainable': trainable,
-            'frozen': frozen,
-            'total': total,
-            'trainable_pct': 100 * trainable / total if total > 0 else 0
-        }
-
-    def print_param_summary(self):
-        stats = self.get_trainable_params()
-        print("\n" + "=" * 60)
-        print("MODEL PARAMETER SUMMARY")
-        print("=" * 60)
-        print(f"Trainable parameters: {stats['trainable']:,}")
-        print(f"Frozen parameters:    {stats['frozen']:,}")
-        print(f"Total parameters:     {stats['total']:,}")
-        print(f"Trainable %:          {stats['trainable_pct']:.1f}%")
-        print("=" * 60 + "\n")
-
-    def forward(self, x):
-        """
-        x: (B, T, C, H, W)
-        returns: (B, T, out_channels, H, W)
-        """
-        B, T, C, H, W = x.shape
-        outputs = []
-
-        # Grad enabled only if encoder is trainable
-        encoder_has_trainable = any(p.requires_grad for p in self.encoder.parameters())
-        for t in range(T):
-            frame = x[:, t]  # (B, C, H, W)
-
-            with torch.set_grad_enabled(self.encoder.training and encoder_has_trainable):
-                enc_feats = self.encoder(frame)
-
-            f1, f2, f3, f4 = enc_feats
-            bottleneck = self.bottleneck_proj(f4)  # (B, hidden_dim, h_b, w_b)
-
-            # No temporal state: just decode this frame
-            out_frame = self.decoder(bottleneck, enc_feats, out_size=(H, W))
-            outputs.append(out_frame.unsqueeze(1))  # (B, 1, C_out, H, W)
-
-        return torch.cat(outputs, dim=1)  # (B, T, C_out, H, W)

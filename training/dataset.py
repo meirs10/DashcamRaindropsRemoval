@@ -1,51 +1,65 @@
 # training/dataset.py
 """
-Dataset for video rain removal training
-Loads sequences of frames with scene-level split (80/10/10)
+Dataset for video rain removal training.
+
+Stage 1 configuration:
+
+- Uses **all frames** from all videos in train and val.
+- Treats each frame as an independent sample (T = 1).
+- Supports random square crops (256/384/512) that are applied per sample.
 """
 
-import os
 import json
 import random
+from pathlib import Path
+
 import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from pathlib import Path
 
 
 class RainRemovalDataset(Dataset):
     """
-    Dataset for loading rainy and clean video frames
+    Dataset for loading rainy and clean video frames.
 
-    Supports scene-level split to prevent data leakage:
-    - Reads split from scene_split.json if available
-    - Falls back to generating split with seed=42
+    When per_frame=True (Stage 1):
+      - Every frame in every (scene, angle) is a separate sample.
+      - __getitem__ returns a single-frame "clip": (T=1, C, H, W).
     """
 
-    def __init__(self,
-                 clean_base_dir,
-                 rainy_base_dir,
-                 num_scenes=101,
-                 frames_per_clip=8,
-                 consecutive_frames=True,
-                 img_size=(540, 960),
-                 split='train',
-                 train_ratio=0.8,
-                 val_ratio=0.1,
-                 split_file=None):
+    def __init__(
+        self,
+        clean_base_dir,
+        rainy_base_dir,
+        num_scenes=101,
+        frames_per_clip=8,
+        consecutive_frames=True,
+        img_size=(512, 512),
+        split="train",
+        train_ratio=0.8,
+        val_ratio=0.1,
+        split_file=None,
+        per_frame: bool = False,
+        random_crop: bool = False,
+        crop_sizes=None,
+        crop_probs=None,
+    ):
         """
         Args:
-            clean_base_dir: Path to clean images (e.g., data/)
-            rainy_base_dir: Path to rainy images (e.g., data_after_crapification/)
-            num_scenes: Total number of scenes (default: 101)
-            frames_per_clip: Number of consecutive frames to load (default: 8)
-            img_size: (height, width) to resize images to (default: 540x960)
-            split: 'train', 'val', or 'test'
-            train_ratio: Ratio for training set (default: 0.8 = 80%)
-            val_ratio: Ratio for validation set (default: 0.1 = 10%)
-                      Test ratio is automatically 1 - train_ratio - val_ratio
-            split_file: Path to scene_split.json (if None, auto-detect)
+            clean_base_dir: Path to clean images root.
+            rainy_base_dir: Path to rainy images root.
+            num_scenes: total number of scenes.
+            frames_per_clip: kept for compatibility (used only when per_frame=False).
+            consecutive_frames: kept for compatibility.
+            img_size: (H, W) of network input after crop/resize.
+            split: 'train', 'val', or 'test'.
+            train_ratio, val_ratio: scene split ratios if no split_file is given.
+            split_file: optional JSON with scene split.
+            per_frame: if True, each frame is an independent sample (Stage 1).
+            random_crop: if True, use random square crops.
+            crop_sizes: list of crop side lengths (e.g. [256, 384, 512]).
+            crop_probs: list of probabilities for the crop sizes.
         """
         self.clean_base = Path(clean_base_dir)
         self.rainy_base = Path(rainy_base_dir)
@@ -54,314 +68,254 @@ class RainRemovalDataset(Dataset):
         self.img_size = img_size
         self.split = split
 
-        # Camera angles
+        self.per_frame = per_frame
+        self.random_crop = random_crop
+        self.crop_sizes = crop_sizes
+        self.crop_probs = crop_probs
+
+        # Camera angles present in your dataset
         self.angles = [
-            'front-forward',
-            'left-backward',
-            'left-forward',
-            'right-backward',
-            'right-forward'
+            "front-forward",
+            "left-backward",
+            "left-forward",
+            "right-backward",
+            "right-forward",
         ]
 
-        # ===== Load or generate scene split =====
+        # ===== Determine scene split =====
         if split_file is None:
-            # Try to auto-detect scene_split.json
-            split_file = Path(clean_base_dir).parent / "scene_split.json"
+            split_file = self.clean_base.parent / "scene_split.json"
 
         if Path(split_file).exists():
-            # Load split from file (preferred method)
-            print(f"📋 Loading split from: {split_file}")
-            with open(split_file, 'r') as f:
+            print(f"📋 Loading scene split from: {split_file}")
+            with open(split_file, "r") as f:
                 split_info = json.load(f)
-
             selected_scenes = split_info[split]
-            print(f"   Using {split} scenes from file")
-
         else:
-            # Fallback: generate split on the fly
-            print(f"⚠️  Split file not found: {split_file}")
-            print(f"   Generating split with seed=42...")
-
+            print(f"⚠️ Split file not found at {split_file}, generating a new split.")
             all_scenes = list(range(1, num_scenes + 1))
-            random.seed(42)  # CRITICAL: Fixed seed for reproducibility
+            random.seed(42)
             random.shuffle(all_scenes)
 
-            # Calculate split indices
             train_end = int(len(all_scenes) * train_ratio)
             val_end = train_end + int(len(all_scenes) * val_ratio)
 
-            # Split scenes
-            if split == 'train':
+            if split == "train":
                 selected_scenes = all_scenes[:train_end]
-            elif split == 'val':
+            elif split == "val":
                 selected_scenes = all_scenes[train_end:val_end]
-            elif split == 'test':
+            elif split == "test":
                 selected_scenes = all_scenes[val_end:]
             else:
-                raise ValueError(f"split must be 'train', 'val', or 'test', got '{split}'")
+                raise ValueError(f"Invalid split: {split}")
 
-        print(f"   Selected {len(selected_scenes)} scenes for {split}")
+        print(f"{split.upper()} scenes: {len(selected_scenes)}")
 
-        # ===== Build sample list =====
+        # ===== Build per-frame samples (Stage 1) or clip-level samples (for later) =====
         self.samples = []
 
-        for scene_num in selected_scenes:
-            scene_name = f"scene_{scene_num:03d}"
+        if self.per_frame:
+            # --- Stage 1: every frame is a separate sample ---
+            for scene_num in selected_scenes:
+                scene_name = f"scene_{scene_num:03d}"
 
-            for angle in self.angles:
-                # Paths to clean and rainy images
-                clean_dir = self.clean_base / scene_name / "images" / angle
-                rainy_dir = self.rainy_base / scene_name / angle
+                for angle in self.angles:
+                    clean_dir = self.clean_base / scene_name / "images" / angle
+                    rainy_dir = self.rainy_base / scene_name / angle
 
-                # Check if both directories exist
-                if not clean_dir.exists() or not rainy_dir.exists():
-                    continue
+                    if not clean_dir.exists() or not rainy_dir.exists():
+                        continue
 
-                # Get image files
-                clean_files = sorted(list(clean_dir.glob('*.jpeg')))
-                rainy_files = sorted(list(rainy_dir.glob('*.jpeg')))
+                    clean_files = sorted(clean_dir.glob("*.jpeg"))
+                    rainy_files = sorted(rainy_dir.glob("*.jpeg"))
 
-                # Need at least frames_per_clip frames
-                if len(clean_files) >= frames_per_clip and len(rainy_files) >= frames_per_clip:
-                    self.samples.append({
-                        'scene': scene_name,
-                        'angle': angle,
-                        'clean_dir': clean_dir,
-                        'rainy_dir': rainy_dir,
-                        'num_frames': min(len(clean_files), len(rainy_files))
-                    })
+                    num_frames = min(len(clean_files), len(rainy_files))
+                    if num_frames == 0:
+                        continue
 
-        print(f"{split.upper()} dataset: {len(self.samples)} scene/angle pairs "
-              f"from {len(selected_scenes)} scenes")
+                    # Each frame index gives one sample.
+                    for frame_idx in range(num_frames):
+                        self.samples.append(
+                            {
+                                "clean_path": clean_files[frame_idx],
+                                "rainy_path": rainy_files[frame_idx],
+                            }
+                        )
+
+            print(
+                f"Per-frame mode ON: {len(self.samples)} total frame-samples "
+                f"for split '{split}'."
+            )
+        else:
+            # --- Future use: clip-level mode (ConvLSTM with T>1) ---
+            for scene_num in selected_scenes:
+                scene_name = f"scene_{scene_num:03d}"
+
+                for angle in self.angles:
+                    clean_dir = self.clean_base / scene_name / "images" / angle
+                    rainy_dir = self.rainy_base / scene_name / angle
+
+                    if not clean_dir.exists() or not rainy_dir.exists():
+                        continue
+
+                    clean_files = sorted(clean_dir.glob("*.jpeg"))
+                    rainy_files = sorted(rainy_dir.glob("*.jpeg"))
+
+                    num_frames = min(len(clean_files), len(rainy_files))
+                    if num_frames == 0:
+                        continue
+
+                    self.samples.append(
+                        {
+                            "scene": scene_name,
+                            "angle": angle,
+                            "clean_files": clean_files,
+                            "rainy_files": rainy_files,
+                            "num_frames": num_frames,
+                        }
+                    )
+
+            print(
+                f"Clip mode: {len(self.samples)} scene/angle clips "
+                f"for split '{split}'."
+            )
 
     def __len__(self):
         return len(self.samples)
 
-    def load_frame(self, path, size=None):
+    # ===== Image loading and cropping utilities =====
+    def _random_square_crop(self, img: np.ndarray) -> np.ndarray:
         """
-        Load and preprocess a single frame
-
-        Args:
-            path: Path to image file
-            size: (height, width) to resize to, or None to use self.img_size
-
-        Returns:
-            torch.Tensor: (C, H, W) normalized to [0, 1]
+        img: H x W x C (RGB float or uint8)
+        Returns a cropped region resized to self.img_size.
         """
-        if size is None:
-            size = self.img_size
+        H, W, _ = img.shape
+        target_h, target_w = self.img_size
 
-        # Read image
+        if not self.random_crop or not self.crop_sizes:
+            # Fallback: direct resize
+            return cv2.resize(img, (target_w, target_h))
+
+        # choose crop size according to probabilities
+        size = random.choices(self.crop_sizes, weights=self.crop_probs, k=1)[0]
+        size = int(size)
+
+        # clamp to image size
+        max_side = min(H, W)
+        if size > max_side:
+            size = max_side
+
+        if size <= 0:
+            return cv2.resize(img, (target_w, target_h))
+
+        y_max = H - size
+        x_max = W - size
+        if y_max < 0 or x_max < 0:
+            return cv2.resize(img, (target_w, target_h))
+
+        y0 = random.randint(0, max(0, y_max))
+        x0 = random.randint(0, max(0, x_max))
+
+        crop = img[y0 : y0 + size, x0 : x0 + size]
+        crop = cv2.resize(crop, (target_w, target_h))
+        return crop
+
+    def _sample_square_coords(self, H, W):
+        size = random.choices(self.crop_sizes, weights=self.crop_probs, k=1)[0]
+        size = int(min(size, H, W))
+        if size <= 0:
+            return 0, 0, min(H, W)
+
+        y_max = H - size
+        x_max = W - size
+        y0 = random.randint(0, max(0, y_max))
+        x0 = random.randint(0, max(0, x_max))
+        return y0, x0, size
+
+    def _load_frame(self, path: Path) -> torch.Tensor:
+        """
+        Load one frame, apply crop/resize, normalize to [0,1], return (C,H,W) tensor.
+        """
         img = cv2.imread(str(path))
         if img is None:
             raise ValueError(f"Failed to load image: {path}")
 
-        # Convert BGR to RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        # Resize
-        img = cv2.resize(img, (size[1], size[0]))  # cv2.resize expects (width, height)
-
-        # Normalize to [0, 1]
         img = img.astype(np.float32) / 255.0
 
-        # Convert to torch tensor (H, W, C) -> (C, H, W)
-        img_tensor = torch.from_numpy(img).permute(2, 0, 1)
+        if self.random_crop:
+            img = self._random_square_crop(img)
+        else:
+            h_out, w_out = self.img_size
+            img = cv2.resize(img, (w_out, h_out))
 
+        img_tensor = torch.from_numpy(img).permute(2, 0, 1)  # (C, H, W)
         return img_tensor
 
     def __getitem__(self, idx):
         """
-        Load a video clip (sequence of frames)
-
         Returns:
-            rainy_video: torch.Tensor (T, C, H, W) - rainy frames
-            clean_video: torch.Tensor (T, C, H, W) - clean frames
+            rainy_video: (T, C, H, W)
+            clean_video: (T, C, H, W)
+
+        Stage 1 (per_frame=True): T = 1.
         """
-        sample = self.samples[idx]
+        if self.per_frame:
+            rec = self.samples[idx]
 
-        clean_dir = sample['clean_dir']
-        rainy_dir = sample['rainy_dir']
-        num_frames = sample['num_frames']
+            # read both full-size images as float RGB in [0,1]
+            rainy_img = cv2.imread(str(rec["rainy_path"]))
+            clean_img = cv2.imread(str(rec["clean_path"]))
 
-        # Get all frame files
-        clean_files = sorted(list(clean_dir.glob('*.jpeg')))
-        rainy_files = sorted(list(rainy_dir.glob('*.jpeg')))
+            rainy_img = cv2.cvtColor(rainy_img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            clean_img = cv2.cvtColor(clean_img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
 
-        # -----------------------------------------
-        # Choose frame indices
-        # -----------------------------------------
+            H, W, _ = rainy_img.shape
+
+            if self.random_crop and self.crop_sizes:
+                y0, x0, size = self._sample_square_coords(H, W)
+                rainy_img = rainy_img[y0:y0 + size, x0:x0 + size]
+                clean_img = clean_img[y0:y0 + size, x0:x0 + size]
+
+            # final resize to IMG_SIZE
+            h_out, w_out = self.img_size
+            rainy_img = cv2.resize(rainy_img, (w_out, h_out))
+            clean_img = cv2.resize(clean_img, (w_out, h_out))
+
+            rainy = torch.from_numpy(rainy_img).permute(2, 0, 1)
+            clean = torch.from_numpy(clean_img).permute(2, 0, 1)
+
+            return rainy.unsqueeze(0), clean.unsqueeze(0)  # T=1
+
+        # --- Clip-level mode for future stages ---
+        rec = self.samples[idx]
+        clean_files = rec["clean_files"]
+        rainy_files = rec["rainy_files"]
+        num_frames = rec["num_frames"]
+
+        # choose frame indices
         if self.consecutive_frames:
-            # Original behavior: a consecutive clip
             if num_frames > self.frames_per_clip:
                 start_idx = random.randint(0, num_frames - self.frames_per_clip)
             else:
                 start_idx = 0
-
             frame_indices = list(range(start_idx, start_idx + self.frames_per_clip))
-
         else:
-            # New behavior: pick self.frames_per_clip RANDOM frames
             if num_frames >= self.frames_per_clip:
-                # Sample distinct frame indices, then sort to keep temporal order
                 frame_indices = sorted(
                     random.sample(range(num_frames), self.frames_per_clip)
                 )
             else:
-                # Fewer frames than requested: sample with replacement
                 frame_indices = sorted(
                     random.choices(range(num_frames), k=self.frames_per_clip)
                 )
 
-            # -----------------------------------------
-            # Load selected frames
-            # -----------------------------------------
         rainy_frames = []
         clean_frames = []
+        for f_idx in frame_indices:
+            rainy_frames.append(self._load_frame(rainy_files[f_idx]))
+            clean_frames.append(self._load_frame(clean_files[f_idx]))
 
-        for idx in frame_indices:
-            rainy_frame = self.load_frame(rainy_files[idx])
-            rainy_frames.append(rainy_frame)
-
-            clean_frame = self.load_frame(clean_files[idx])
-            clean_frames.append(clean_frame)
-
-        # Stack frames into video tensors (T, C, H, W)
         rainy_video = torch.stack(rainy_frames, dim=0)
         clean_video = torch.stack(clean_frames, dim=0)
-
         return rainy_video, clean_video
-
-
-# ===== Utility functions =====
-
-def get_scene_split(split_file=None, num_scenes=101, train_ratio=0.8, val_ratio=0.1):
-    """
-    Get scene split (train/val/test)
-
-    Args:
-        split_file: Path to scene_split.json (if None, generate split)
-        num_scenes: Total number of scenes
-        train_ratio: Training set ratio
-        val_ratio: Validation set ratio
-
-    Returns:
-        dict with keys 'train', 'val', 'test' containing scene numbers
-    """
-    if split_file and Path(split_file).exists():
-        with open(split_file, 'r') as f:
-            return json.load(f)
-
-    # Generate split
-    all_scenes = list(range(1, num_scenes + 1))
-    random.seed(42)
-    random.shuffle(all_scenes)
-
-    train_end = int(len(all_scenes) * train_ratio)
-    val_end = train_end + int(len(all_scenes) * val_ratio)
-
-    return {
-        'train': sorted(all_scenes[:train_end]),
-        'val': sorted(all_scenes[train_end:val_end]),
-        'test': sorted(all_scenes[val_end:])
-    }
-
-
-# ===== Test/Debug code =====
-
-if __name__ == "__main__":
-    """Test the dataset"""
-    from pathlib import Path
-
-    BASE = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
-
-    print("=" * 60)
-    print("TESTING DATASET")
-    print("=" * 60 + "\n")
-
-    # Test train dataset
-    print("Creating train dataset...")
-    train_dataset = RainRemovalDataset(
-        clean_base_dir=BASE / "data",
-        rainy_base_dir=BASE / "data_after_crapification",
-        num_scenes=101,
-        frames_per_clip=8,
-        img_size=(540, 960),
-        split='train',
-        train_ratio=0.8,
-        val_ratio=0.1
-    )
-
-    print(f"Train dataset size: {len(train_dataset)}")
-
-    # Load one sample
-    print("\nLoading sample...")
-    rainy, clean = train_dataset[0]
-
-    print(f"Rainy video shape: {rainy.shape}")  # Should be (8, 3, 540, 960)
-    print(f"Clean video shape: {clean.shape}")  # Should be (8, 3, 540, 960)
-    print(f"Rainy range: [{rainy.min():.3f}, {rainy.max():.3f}]")
-    print(f"Clean range: [{clean.min():.3f}, {clean.max():.3f}]")
-
-    # Test val dataset
-    print("\n" + "-" * 60)
-    print("Creating val dataset...")
-    val_dataset = RainRemovalDataset(
-        clean_base_dir=BASE / "data",
-        rainy_base_dir=BASE / "data_after_crapification",
-        num_scenes=101,
-        frames_per_clip=8,
-        img_size=(540, 960),
-        split='val',
-        train_ratio=0.8,
-        val_ratio=0.1
-    )
-
-    print(f"Val dataset size: {len(val_dataset)}")
-
-    # Test test dataset
-    print("\n" + "-" * 60)
-    print("Creating test dataset...")
-    test_dataset = RainRemovalDataset(
-        clean_base_dir=BASE / "data",
-        rainy_base_dir=BASE / "test_data_after_crapification",  # Different dir!
-        num_scenes=101,
-        frames_per_clip=8,
-        img_size=(540, 960),
-        split='test',
-        train_ratio=0.8,
-        val_ratio=0.1
-    )
-
-    print(f"Test dataset size: {len(test_dataset)}")
-
-    # Summary
-    print("\n" + "=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
-    print(f"Train pairs: {len(train_dataset)}")
-    print(f"Val pairs:   {len(val_dataset)}")
-    print(f"Test pairs:  {len(test_dataset)}")
-    print(f"Total:       {len(train_dataset) + len(val_dataset) + len(test_dataset)}")
-
-    # Check for overlap
-    train_scenes = set(s['scene'] for s in train_dataset.samples)
-    val_scenes = set(s['scene'] for s in val_dataset.samples)
-    test_scenes = set(s['scene'] for s in test_dataset.samples)
-
-    overlap_train_val = train_scenes & val_scenes
-    overlap_train_test = train_scenes & test_scenes
-    overlap_val_test = val_scenes & test_scenes
-
-    if not (overlap_train_val or overlap_train_test or overlap_val_test):
-        print("\n✓ No scene overlap between splits!")
-    else:
-        print("\n❌ WARNING: Scene overlap detected!")
-        if overlap_train_val:
-            print(f"   Train/Val: {overlap_train_val}")
-        if overlap_train_test:
-            print(f"   Train/Test: {overlap_train_test}")
-        if overlap_val_test:
-            print(f"   Val/Test: {overlap_val_test}")
-
-    print("=" * 60)
