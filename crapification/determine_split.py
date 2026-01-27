@@ -3,7 +3,7 @@ import random
 import json
 from pathlib import Path
 
-BASE = Path(r"/")
+BASE = Path(__file__).parent
 SPLIT_FILE = BASE / "scene_split.json"
 
 # Same shuffle as before (seed=42)

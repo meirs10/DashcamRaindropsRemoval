@@ -35,7 +35,7 @@ OUTPUT_BASE = BASE / "test_data_after_crapification"
 CONFIG_FILE = Path(__file__).parent / "scene_intensity_configs.json"
 SPLIT_FILE = Path(__file__).parent / "scene_split.json"
 
-TEXTURE_DIR = BASE / "rain-rendering" / "3rdparty" / "rainstreakdb"
+TEXTURE_DIR = BASE / "rain-rendering" / "rainstreakdb"
 
 ANGLES = [
     'front-forward',
