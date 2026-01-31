@@ -29,11 +29,12 @@ from crapification.scene_configurations import load_configurations
 # =======================
 
 DATA_DIR = BASE / "data"
-OUTPUT_BASE = BASE / "test_data_after_crapification"
+OUTPUT_BASE = BASE / "data_after_crapification_per_video"
 
 # Configs inside crapification folder
 CONFIG_FILE = Path(__file__).parent / "scene_intensity_configs.json"
 SPLIT_FILE = Path(__file__).parent / "scene_split.json"
+SPLIT_GROUP = "val"
 
 TEXTURE_DIR = BASE / "rain-rendering" / "rainstreakdb"
 
@@ -50,7 +51,7 @@ ANGLES = [
 # TEST SCENE SELECTION
 # =======================
 
-def get_test_scene_numbers():
+def get_scene_numbers(split_group):
     """Load test scenes from scene_split.json"""
     if not SPLIT_FILE.exists():
         print(f"❌ Split file not found: {SPLIT_FILE}")
@@ -60,7 +61,7 @@ def get_test_scene_numbers():
     with open(SPLIT_FILE, 'r') as f:
         split_info = json.load(f)
 
-    return split_info['test']
+    return split_info[split_group]
 
 
 # =======================
@@ -108,7 +109,7 @@ def ensure_depth_exists(scene_name, angle):
         return False
 
     if depth_dir.exists():
-        depth_files = [f for f in os.listdir(depth_dir) if f.lower().endswith('.png')]
+        depth_files = [f for f in os.listdir(depth_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
     else:
         depth_files = []
 
@@ -227,17 +228,17 @@ def main():
     print("=" * 60 + "\n")
 
     # Get test scenes
-    test_scenes = get_test_scene_numbers()
+    scenes = get_scene_numbers(SPLIT_GROUP)
 
-    if not test_scenes:
-        print("❌ No test scenes found!")
+    if not scenes:
+        print("❌ No scenes found!")
         return
 
-    print(f"📋 Test scenes (80/10/10 split):")
-    print(f"   Scenes: {test_scenes}")
-    print(f"   Count: {len(test_scenes)} scenes")
+    print(f"📋 scenes (80/10/10 split):")
+    print(f"   Scenes: {scenes}")
+    print(f"   Count: {len(scenes)} scenes")
     print(f"   Angles: {len(ANGLES)}")
-    print(f"   Total: {len(test_scenes) * len(ANGLES)} combinations\n")
+    print(f"   Total: {len(scenes) * len(ANGLES)} combinations\n")
 
     # Load intensity configs
     if not CONFIG_FILE.exists():
@@ -250,12 +251,12 @@ def main():
     start_time = datetime.now()
     total_images = 0
     completed = 0
-    total_combinations = len(test_scenes) * len(ANGLES)
+    total_combinations = len(scenes) * len(ANGLES)
 
     temp_base = BASE / "temp_test_pipeline"
 
     # Process test scenes
-    for scene_num in test_scenes:
+    for scene_num in scenes:
         scene_name = f"scene_{scene_num:03d}"
         intensity_config = scene_configs[scene_num]
 

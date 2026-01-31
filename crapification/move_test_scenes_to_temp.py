@@ -6,7 +6,7 @@ from datetime import datetime
 
 BASE = Path(r"D:\Pycharm Projects\DashcamRaindropsRemoval")
 SPLIT_FILE = BASE / "scene_split.json"
-DATA_DIR = BASE / "data_after_crapification"
+DATA_DIR = BASE / "data_after_crapification_per_frame"
 BACKUP_DIR = BASE / "temp_test_scenes_backup"  # ← Backup location
 
 # Create backup directory with timestamp
@@ -66,7 +66,7 @@ if not_found:
 
 print(f"\n✓ Test scenes backed up to:")
 print(f"  {BACKUP_DIR}")
-print(f"\n✓ data_after_crapification now contains only train+val scenes")
+print(f"\n✓ data_after_crapification_per_frame now contains only train+val scenes")
 print(f"\nTo restore test scenes later:")
 print(f"  Simply move them back from {BACKUP_DIR}")
 print("=" * 60)

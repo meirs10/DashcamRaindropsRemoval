@@ -60,29 +60,34 @@ class SSIMLoss(nn.Module):
         return window
 
     def _ssim(self, img1, img2):
-        """Calculate SSIM between two images"""
         window = self.window.to(img1.device).type_as(img1)
 
+        # 1. Calculate Means (mu)
         mu1 = F.conv2d(img1, window, padding=self.window_size // 2, groups=self.channel)
         mu2 = F.conv2d(img2, window, padding=self.window_size // 2, groups=self.channel)
 
+        # 2. Calculate Variances (sigma squared) - The Stable Way
+        # Instead of E[X^2] - mu^2, we do E[(X - mu)^2]
         mu1_sq = mu1.pow(2)
         mu2_sq = mu2.pow(2)
         mu1_mu2 = mu1 * mu2
 
-        sigma1_sq = F.conv2d(img1 * img1, window, padding=self.window_size // 2, groups=self.channel) - mu1_sq
-        sigma2_sq = F.conv2d(img2 * img2, window, padding=self.window_size // 2, groups=self.channel) - mu2_sq
-        sigma12 = F.conv2d(img1 * img2, window, padding=self.window_size // 2, groups=self.channel) - mu1_mu2
+        # Numerically stable variance:
+        sigma1_sq = F.conv2d((img1 - mu1).pow(2), window, padding=self.window_size // 2, groups=self.channel)
+        sigma2_sq = F.conv2d((img2 - mu2).pow(2), window, padding=self.window_size // 2, groups=self.channel)
+        # Numerically stable covariance:
+        sigma12 = F.conv2d((img1 - mu1) * (img2 - mu2), window, padding=self.window_size // 2, groups=self.channel)
 
+        # 3. SSIM Formula
         C1 = 0.01 ** 2
         C2 = 0.03 ** 2
 
-        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+        num = (2 * mu1_mu2 + C1) * (2 * sigma12 + C2)
+        den = (mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2)
 
-        if self.size_average:
-            return ssim_map.mean()
-        else:
-            return ssim_map.mean(1).mean(1).mean(1)
+        ssim_map = num / den
+
+        return ssim_map.mean() if self.size_average else ssim_map.mean(1).mean(1).mean(1)
 
     def forward(self, pred, target):
         """
@@ -199,18 +204,14 @@ class TemporalConsistencyLoss(nn.Module):
 # ======================
 class PerceptualLoss(nn.Module):
     """
-    VGG-based perceptual loss - optimized version
-    Compares high-level features instead of raw pixels
+    VGG-based perceptual loss (faster version).
+    - Uses VGG16 layers [8, 15]
+    - Downsamples inputs to 224x224 before feeding VGG
     """
 
-    def __init__(self, layers=[3, 8, 15], weights=[1.0, 0.5, 0.25]):
-        """
-        layers: which VGG layers to use (default: relu1_2, relu2_2, relu3_3)
-        weights: weight for each layer (deeper layers get less weight)
-        """
+    def __init__(self, layers=[8, 15], weights=[1.0, 0.5], resize_to=224):
         super().__init__()
 
-        # Load VGG16
         vgg = models.vgg16(pretrained=True).features
 
         # Split into blocks at specified layers
@@ -227,21 +228,40 @@ class PerceptualLoss(nn.Module):
                 param.requires_grad = False
 
         self.weights = weights
+        self.resize_to = resize_to
 
         # VGG normalization (ImageNet stats)
-        self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-        self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.register_buffer(
+            'mean',
+            torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+        )
+        self.register_buffer(
+            'std',
+            torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+        )
 
     def _normalize(self, x):
-        """Normalize to ImageNet stats"""
+        """Normalize to ImageNet stats."""
         return (x - self.mean) / self.std
 
     def _extract_features(self, x):
-        """Extract features from all blocks"""
+        """
+        x: (B, T, C, H, W) or (B, C, H, W)
+        Returns list of feature maps from the chosen VGG blocks.
+        """
         # Flatten temporal dimension if exists
         if x.dim() == 5:
             B, T, C, H, W = x.shape
             x = x.view(B * T, C, H, W)
+
+        # Resize to VGG-friendly size (speedup)
+        if self.resize_to is not None:
+            x = F.interpolate(
+                x,
+                size=(self.resize_to, self.resize_to),
+                mode="bilinear",
+                align_corners=False,
+            )
 
         # Normalize
         x = self._normalize(x)
@@ -256,11 +276,14 @@ class PerceptualLoss(nn.Module):
 
     def forward(self, pred, target):
         """
-        pred: (B, T, C, H, W) or (B, C, H, W)
+        pred:   (B, T, C, H, W) or (B, C, H, W)
         target: same shape
         """
         pred_features = self._extract_features(pred)
-        target_features = self._extract_features(target)
+
+        # Target does not need gradients
+        with torch.no_grad():
+            target_features = self._extract_features(target)
 
         loss = 0.0
         for pred_feat, target_feat, weight in zip(pred_features, target_features, self.weights):

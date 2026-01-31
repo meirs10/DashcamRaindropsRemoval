@@ -9,7 +9,7 @@ import subprocess
 
 BASE = r"D:\Pycharm Projects\DashcamRaindropsRemoval"
 DATA_DIR = os.path.join(BASE, "data")
-OUTPUT_DIR = os.path.join(BASE, "data_after_crapification")
+OUTPUT_DIR = os.path.join(BASE, "data_after_crapification_per_frame")
 VIDEO_OUTPUT_DIR = os.path.join(BASE, "videos")
 
 ANGLES = [

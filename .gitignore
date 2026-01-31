@@ -11,8 +11,11 @@ data/
 !data/.gitkeep
 
 # Processed/degraded images
-data_after_crapification/
-!data_after_crapification/.gitkeep
+data_after_crapification_per_frame/
+!data_after_crapification_per_frame/.gitkeep
+
+data_after_crapification_per_video/
+!data_after_crapification_per_video/.gitkeep
 
 # Temporary processing directories
 temp_pipeline/
@@ -198,5 +201,5 @@ temp_*.jpeg
 docs/_build/
 
 #other
-test_data_after_crapification
+data_after_crapification_per_video
 #test_results
