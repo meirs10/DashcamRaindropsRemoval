@@ -33,7 +33,7 @@ class RainRemovalDataset(Dataset):
         clean_base_dir,
         rainy_base_dir,
         num_scenes=101,
-        frames_per_clip=8,
+        frames_per_clip=200,
         consecutive_frames=True,
         img_size=(512, 512),
         split="train",
@@ -50,8 +50,8 @@ class RainRemovalDataset(Dataset):
             clean_base_dir: Path to clean images root.
             rainy_base_dir: Path to rainy images root.
             num_scenes: total number of scenes.
-            frames_per_clip: kept for compatibility (used only when per_frame=False).
-            consecutive_frames: kept for compatibility.
+            frames_per_clip: used only when per_frame=False (clip length T).
+            consecutive_frames: if True, sample a consecutive clip, else random frames.
             img_size: (H, W) of network input after crop/resize.
             split: 'train', 'val', or 'test'.
             train_ratio, val_ratio: scene split ratios if no split_file is given.
@@ -147,7 +147,7 @@ class RainRemovalDataset(Dataset):
                 f"for split '{split}'."
             )
         else:
-            # --- Future use: clip-level mode (ConvLSTM with T>1) ---
+            # --- Clip-level mode (ConvLSTM with T>1) ---
             for scene_num in selected_scenes:
                 scene_name = f"scene_{scene_num:03d}"
 
@@ -221,6 +221,9 @@ class RainRemovalDataset(Dataset):
         return crop
 
     def _sample_square_coords(self, H, W):
+        """
+        Sample a random square crop (y0, x0, size) within an HxW image.
+        """
         size = random.choices(self.crop_sizes, weights=self.crop_probs, k=1)[0]
         size = int(min(size, H, W))
         if size <= 0:
@@ -232,21 +235,38 @@ class RainRemovalDataset(Dataset):
         x0 = random.randint(0, max(0, x_max))
         return y0, x0, size
 
-    def _load_frame(self, path: Path) -> torch.Tensor:
+    def _load_frame(self, path: Path, crop_coords=None) -> torch.Tensor:
         """
-        Load one frame, apply crop/resize, normalize to [0,1], return (C,H,W) tensor.
+        Load one frame, optionally apply a fixed crop, resize, normalize to [0,1],
+        and return a (C, H, W) tensor.
+
+        crop_coords: optional (y0, x0, size) to force the same square crop
+                     across multiple frames (e.g., a whole clip).
         """
         img = cv2.imread(str(path))
         if img is None:
             raise ValueError(f"Failed to load image: {path}")
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32) / 255.0
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+        h_out, w_out = self.img_size
 
         if self.random_crop:
-            img = self._random_square_crop(img)
+            if crop_coords is not None:
+                # Use the same crop for this clip
+                y0, x0, size = crop_coords
+                H, W, _ = img.shape
+                size = min(size, H, W)
+
+                # Clamp coords to be safe
+                y0 = max(0, min(y0, H - size))
+                x0 = max(0, min(x0, W - size))
+
+                img = img[y0 : y0 + size, x0 : x0 + size]
+                img = cv2.resize(img, (w_out, h_out))
+            else:
+                # Old behavior: independent random crop
+                img = self._random_square_crop(img)
         else:
-            h_out, w_out = self.img_size
             img = cv2.resize(img, (w_out, h_out))
 
         img_tensor = torch.from_numpy(img).permute(2, 0, 1)  # (C, H, W)
@@ -259,6 +279,9 @@ class RainRemovalDataset(Dataset):
             clean_video: (T, C, H, W)
 
         Stage 1 (per_frame=True): T = 1.
+
+        Clip mode (per_frame=False): T = frames_per_clip, all frames share the
+        same random square crop if random_crop=True.
         """
         if self.per_frame:
             rec = self.samples[idx]
@@ -267,15 +290,25 @@ class RainRemovalDataset(Dataset):
             rainy_img = cv2.imread(str(rec["rainy_path"]))
             clean_img = cv2.imread(str(rec["clean_path"]))
 
-            rainy_img = cv2.cvtColor(rainy_img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-            clean_img = cv2.cvtColor(clean_img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            if rainy_img is None or clean_img is None:
+                raise ValueError(
+                    f"Failed to load images: {rec['rainy_path']} or {rec['clean_path']}"
+                )
+
+            rainy_img = cv2.cvtColor(rainy_img, cv2.COLOR_BGR2RGB).astype(
+                np.float32
+            ) / 255.0
+            clean_img = cv2.cvtColor(clean_img, cv2.COLOR_BGR2RGB).astype(
+                np.float32
+            ) / 255.0
 
             H, W, _ = rainy_img.shape
 
             if self.random_crop and self.crop_sizes:
+                # Per-frame mode: each sample gets its own random crop
                 y0, x0, size = self._sample_square_coords(H, W)
-                rainy_img = rainy_img[y0:y0 + size, x0:x0 + size]
-                clean_img = clean_img[y0:y0 + size, x0:x0 + size]
+                rainy_img = rainy_img[y0 : y0 + size, x0 : x0 + size]
+                clean_img = clean_img[y0 : y0 + size, x0 : x0 + size]
 
             # final resize to IMG_SIZE
             h_out, w_out = self.img_size
@@ -310,11 +343,27 @@ class RainRemovalDataset(Dataset):
                     random.choices(range(num_frames), k=self.frames_per_clip)
                 )
 
+        # Decide a single crop for this clip (if random_crop is enabled)
+        crop_coords = None
+        if self.random_crop and self.crop_sizes:
+            # Use first rainy frame in the clip to determine H, W
+            first_idx = frame_indices[0]
+            sample_img = cv2.imread(str(rainy_files[first_idx]))
+            if sample_img is None:
+                raise ValueError(f"Failed to load image: {rainy_files[first_idx]}")
+            H, W, _ = sample_img.shape
+            y0, x0, size = self._sample_square_coords(H, W)
+            crop_coords = (y0, x0, size)
+
         rainy_frames = []
         clean_frames = []
         for f_idx in frame_indices:
-            rainy_frames.append(self._load_frame(rainy_files[f_idx]))
-            clean_frames.append(self._load_frame(clean_files[f_idx]))
+            rainy_frames.append(
+                self._load_frame(rainy_files[f_idx], crop_coords=crop_coords)
+            )
+            clean_frames.append(
+                self._load_frame(clean_files[f_idx], crop_coords=crop_coords)
+            )
 
         rainy_video = torch.stack(rainy_frames, dim=0)
         clean_video = torch.stack(clean_frames, dim=0)

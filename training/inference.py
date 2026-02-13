@@ -22,12 +22,12 @@ sys.path.insert(0, str(BASE / "training"))
 
 from model import MobileNetV3UNetConvLSTMVideo
 
-CHECKPOINT_PATH = BASE / "checkpoints" / "best_stage1.pth"
+CHECKPOINT_PATH = BASE / "checkpoints" / "latest_with_attention.pth"
 
 RAINY_DIR = BASE / "data_after_crapification_per_video" / "scene_004" / "front-forward"
 CLEAN_DIR = BASE / "data" / "scene_004" / "images" / "front-forward"
 
-OUTPUT_DIR = BASE / "test_results" / "scene_004_inference_combined"
+OUTPUT_DIR = BASE / "test_results" / "scene_004_inference_attention"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 FPS = 10
