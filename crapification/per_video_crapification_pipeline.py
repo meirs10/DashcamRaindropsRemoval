@@ -10,25 +10,24 @@ import json
 import shutil
 from pathlib import Path
 from datetime import datetime
-import random
 
 # Get BASE directory (parent of crapification/)
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 # Import from crapification
-from crapification.stage_fog import run_fog_stage
-from crapification.stage_rain_masks import run_rain_mask_stage
-from crapification.stage_composite import run_composite_stage
-from crapification.stage_droplets import run_droplet_stage
-from crapification.generate_depth import generate_depth_for_scene
+from crapification.stages_crapification.stage_fog import run_fog_stage
+from crapification.stages_crapification.stage_rain_masks import run_rain_mask_stage
+from crapification.stages_crapification.stage_composite import run_composite_stage
+from crapification.stages_crapification.stage_droplets import run_droplet_stage
+from crapification.stages_crapification.generate_depth import generate_depth_for_scene
 from crapification.scene_configurations import load_configurations
 
 # =======================
 # PATH CONFIG
 # =======================
 
-DATA_DIR = BASE / "data"
+DATA_DIR = BASE / "data_original"
 OUTPUT_BASE = BASE / "data_after_crapification_per_video"
 
 # Configs inside crapification folder

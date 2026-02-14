@@ -36,8 +36,8 @@ from losses import CombinedVideoLoss
 # ------------------------------------------------------------------------------------
 # Paths and constants
 # ------------------------------------------------------------------------------------
-CLEAN_DATA = BASE / "data"
-RAINY_DATA = BASE / "test_data_after_crapification"
+CLEAN_DATA = BASE / "data_original"
+RAINY_DATA = BASE / "data_crapified_test"
 SPLIT_FILE = BASE / "crapification" / "scene_split.json"
 
 # Possible checkpoint locations
@@ -239,7 +239,7 @@ def main():
             rainy_dir = RAINY_DATA / scene_name / angle
 
             if not clean_dir.exists() or not rainy_dir.exists():
-                # no such angle for this scene in test data
+                # no such angle for this scene in test data_original
                 continue
 
             clean_files = sorted(clean_dir.glob("*.jpeg"))
@@ -354,7 +354,7 @@ def main():
                     )
 
     if total_frames == 0:
-        print("No frames processed. Check your test split and data paths.")
+        print("No frames processed. Check your test split and data_original paths.")
         return
 
     mean_mae = sum_mae / total_frames

@@ -6,9 +6,8 @@
 # =======================
 # DATA DIRECTORIES (LARGE FILES)
 # =======================
-# Raw data - original dashcam images and depth maps
-data/
-!data/.gitkeep
+# Raw data_original - original dashcam images and depth maps
+data
 
 # Processed/degraded images
 data_after_crapification_per_frame/
@@ -30,8 +29,8 @@ videos/
 # EXTERNAL DEPENDENCIES
 # =======================
 # Rain rendering textures (3rd party)
-rain-rendering/3rdparty/
-rain-rendering/rainstreakdb/
+crapification/rain-rendering/3rdparty/
+crapification/rain-rendering/rainstreakdb/
 
 # =======================
 # PYTHON
@@ -204,6 +203,4 @@ docs/_build/
 data_after_crapification_per_video
 #test_results
 
-test_data_after_crapification
-data_after_crapification
-test_results
+testing/test_results

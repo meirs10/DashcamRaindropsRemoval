@@ -1,6 +1,6 @@
 # crapification/per_frame_crapification_pipeline.py
 """
-Training data crapification pipeline
+Training data_original crapification pipeline
 Processes only train+val scenes (excludes test scenes)
 """
 
@@ -16,11 +16,11 @@ BASE = Path(__file__).parent.parent  # Go up one level from crapification/
 sys.path.insert(0, str(BASE))
 
 # Now import from crapification
-from crapification.stage_fog import run_fog_stage
-from crapification.stage_rain_masks import run_rain_mask_stage
-from crapification.stage_composite import run_composite_stage
-from crapification.stage_droplets import run_droplet_stage
-from crapification.generate_depth import generate_depth_for_scene
+from crapification.stages_crapification.stage_fog import run_fog_stage
+from crapification.stages_crapification.stage_rain_masks import run_rain_mask_stage
+from crapification.stages_crapification.stage_composite import run_composite_stage
+from crapification.stages_crapification.stage_droplets import run_droplet_stage
+from crapification.stages_crapification.generate_depth import generate_depth_for_scene
 from crapification.scene_configurations import (
     generate_scene_configurations,
     load_configurations,
@@ -32,7 +32,7 @@ from crapification.scene_configurations import (
 # PATH CONFIG
 # =======================
 
-DATA_DIR = BASE / "data"
+DATA_DIR = BASE / "data_original"
 OUTPUT_BASE = BASE / "data_after_crapification_per_frame"
 
 # Configs inside crapification folder

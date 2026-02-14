@@ -50,7 +50,7 @@ from losses import CombinedVideoLoss
 # Paths
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE / "training"))
-CLEAN_DATA = BASE / "data"
+CLEAN_DATA = BASE / "data_original"
 RAINY_DATA = BASE / "data_after_crapification_per_frame"
 CHECKPOINT_DIR = BASE / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)

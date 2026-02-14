@@ -35,12 +35,12 @@ sys.path.insert(0, str(BASE / "training"))
 
 from model import MobileNetV3UNetConvLSTMVideo  # type: ignore
 
-CHECKPOINT_PATH = BASE / "checkpoints" / "stage2" / "best_stage2.pth"
+CHECKPOINT_PATH = BASE / "training" / "checkpoints" / "attention" / "latest_with_attention.pth"
 
-RAINY_DIR = BASE / "test_data_after_crapification" / "scene_004" / "front-forward"
-CLEAN_DIR = BASE / "data" / "scene_004" / "images" / "front-forward"
+RAINY_DIR = BASE / "data" / "data_crapified_test" / "scene_004" / "front-forward"
+CLEAN_DIR = BASE / "data" / "data_original" / "scene_004" / "images" / "front-forward"
 
-OUTPUT_DIR = BASE / "test_results" / "scene_004_inference_stage2_benchmark"
+OUTPUT_DIR = BASE / "testing" / "test_results" / "scene_004_inference_attention"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Target "real-time" requirements (for reporting only)
@@ -261,6 +261,8 @@ def main():
         freeze_encoder=True,
     ).to(device)
 
+    # *** IMPORTANT: load weights (fix for "green screen") ***
+    model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
     print(
@@ -438,7 +440,7 @@ def main():
             json.dump(summary, f, indent=4)
         print(f"Timing summary saved to: {summary_path}")
     else:
-        print("No timing data collected (no frames?).")
+        print("No timing data_original collected (no frames?).")
 
 
 if __name__ == "__main__":
