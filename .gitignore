@@ -203,3 +203,7 @@ docs/_build/
 #other
 data_after_crapification_per_video
 #test_results
+
+test_data_after_crapification
+data_after_crapification
+test_results
