@@ -3,7 +3,7 @@
 Stage 2 fine-tuning script (multi-stage sharpening: SSIM + Edge + Perceptual).
 
 Goal:
-- Start from best_stage1.pth (trained mostly with pixel loss).
+- Start from best_stage1.pth (trained with pixel loss).
 - Keep encoder frozen.
 - Gradually introduce:
     * SSIM loss (early)
@@ -34,31 +34,22 @@ Key properties:
 Losses used for checkpointing / curves:
 - For train & val, we always record a metric with the *final* max weights:
     total_max = pixel + MAX_SSIM * ssim + MAX_EDGE * edge + MAX_PERCEPTUAL * perceptual
-
-This matches the format expected by plot_results.py:
-    - 'train_losses'
-    - 'val_losses'
-    - 'train_loss'
-    - 'val_loss'
 """
 
 import sys
 import time
 from pathlib import Path
-
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
-
-BASE = Path(__file__).parent.parent
-sys.path.insert(0, str(BASE / "training"))
-
 from model import MobileNetV3UNetConvLSTMVideo
 from dataset import RainRemovalDataset
 from losses import CombinedVideoLoss
 
 # Paths
+BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE / "training"))
 CLEAN_DATA = BASE / "data"
 RAINY_DATA = BASE / "data_after_crapification_per_frame"
 CHECKPOINT_DIR = BASE / "checkpoints"

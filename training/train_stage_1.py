@@ -4,11 +4,10 @@ Stage 1 training script.
 
 Key properties:
 - Encoder fully frozen (including BatchNorm running stats).
-- Temporal and perceptual losses OFF at the start (delta = epsilon = 0).
 - Per-frame training: every frame from every video is one sample (T = 1).
 - Random square crops with multi-scale (256, 384, 512) for both train and val.
-- Max epochs = 15, ReduceLROnPlateau + early stopping.
-- Perceptual loss enabled with epsilon = 0.05 starting from epoch 7.
+- Max epochs = 50, ReduceLROnPlateau + early stopping.
+- Only pixel loss enabled.
 - Checkpoints saved so Stage 2 can resume from best_stage1.pth.
 """
 
@@ -23,10 +22,9 @@ from model import MobileNetV3UNetConvLSTMVideo
 from dataset import RainRemovalDataset
 from losses import CombinedVideoLoss
 
+# Paths
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE / "training"))
-
-# Paths
 CLEAN_DATA = BASE / "data"
 RAINY_DATA = BASE / "data_after_crapification_per_frame"
 CHECKPOINT_DIR = BASE / "checkpoints"
@@ -126,13 +124,13 @@ def main():
     model.print_param_summary()
 
     # ==================== LOSS ====================
-    # Stage 1: temporal and perceptual OFF initially
+    # Stage 1: train only with pixel loss
     criterion = CombinedVideoLoss(
         alpha=1.0,   # pixel (Charbonnier)
         beta=0.0,    # SSIM
         gamma=0.0,   # Edge
-        delta=0.0,   # Temporal OFF
-        epsilon=0.0  # Perceptual OFF initially
+        delta=0.0,   # Temporal
+        epsilon=0.0  # Perceptual
     ).to(device)
 
     print("Using CombinedVideoLoss (Stage 1 warmup):")
