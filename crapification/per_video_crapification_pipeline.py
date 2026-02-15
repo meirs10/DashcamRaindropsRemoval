@@ -21,21 +21,21 @@ from crapification.stages_crapification.stage_rain_masks import run_rain_mask_st
 from crapification.stages_crapification.stage_composite import run_composite_stage
 from crapification.stages_crapification.stage_droplets import run_droplet_stage
 from crapification.stages_crapification.generate_depth import generate_depth_for_scene
-from crapification.scene_configurations import load_configurations
+from crapification.helpers.scene_configurations import load_configurations
 
 # =======================
 # PATH CONFIG
 # =======================
 
-DATA_DIR = BASE / "data_original"
-OUTPUT_BASE = BASE / "data_after_crapification_per_video"
+DATA_DIR = BASE / "data" / "data_original"
+OUTPUT_BASE = BASE / "data" / "data_crapified_test"
 
 # Configs inside crapification folder
-CONFIG_FILE = Path(__file__).parent / "scene_intensity_configs.json"
-SPLIT_FILE = Path(__file__).parent / "scene_split.json"
-SPLIT_GROUP = "train"
+CONFIG_FILE = Path(__file__).parent / "helpers" / "scene_intensity_configs.json"
+SPLIT_FILE = Path(__file__).parent / "helpers" / "scene_split.json"
+SPLIT_GROUP = "test"
 
-TEXTURE_DIR = BASE / "rain-rendering" / "rainstreakdb"
+TEXTURE_DIR = BASE / "crapification" / "rain-rendering" / "rainstreakdb"
 
 ANGLES = [
     'front-forward',

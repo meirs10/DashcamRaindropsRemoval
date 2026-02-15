@@ -43,16 +43,16 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
-from model import MobileNetV3UNetConvLSTMVideo
-from dataset import RainRemovalDataset
-from losses import CombinedVideoLoss
+from training.helpers.model import MobileNetV3UNetConvLSTMVideo
+from training.helpers.dataset import RainRemovalDataset
+from training.helpers.losses import CombinedVideoLoss
 
 # Paths
 BASE = Path(__file__).parent.parent
-sys.path.insert(0, str(BASE / "training"))
-CLEAN_DATA = BASE / "data_original"
-RAINY_DATA = BASE / "data_after_crapification_per_frame"
-CHECKPOINT_DIR = BASE / "checkpoints"
+sys.path.insert(0, str(BASE))
+CLEAN_DATA = BASE / "data" / "data_original"
+RAINY_DATA = BASE / "data" / "data_crapified_train"
+CHECKPOINT_DIR = BASE / "training" / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 BEST_STAGE1_PATH = CHECKPOINT_DIR / "stage1" / "best_stage1.pth"
@@ -399,13 +399,13 @@ def main():
         }
 
         # latest Stage 2
-        torch.save(checkpoint, CHECKPOINT_DIR / "latest_stage2.pth")
+        torch.save(checkpoint, CHECKPOINT_DIR / "stage2" / "latest_stage2.pth")
 
         # best Stage 2 – based on max-weight val_loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_epoch = epoch_num
-            torch.save(checkpoint, CHECKPOINT_DIR / "best_stage2.pth")
+            torch.save(checkpoint, CHECKPOINT_DIR / "stage2" / "best_stage2.pth")
             print(f"✓ New best Stage-2 model saved "
                   f"(val_loss={val_loss:.6f} at epoch {epoch_num})\n")
 
@@ -413,7 +413,7 @@ def main():
         if epoch_num % 5 == 0:
             torch.save(
                 checkpoint,
-                CHECKPOINT_DIR / f"stage2_epoch_{epoch_num}.pth"
+                CHECKPOINT_DIR / "stage2" / f"stage2_epoch_{epoch_num}.pth"
             )
 
     print("=" * 60)

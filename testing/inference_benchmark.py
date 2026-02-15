@@ -31,9 +31,9 @@ from torch.amp import autocast
 # Paths / config
 # --------------------------------------------------------------------
 BASE = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE / "training"))
+sys.path.insert(0, str(BASE))
 
-from model import MobileNetV3UNetConvLSTMVideo  # type: ignore
+from training.helpers.model import MobileNetV3UNetConvLSTMVideo  # type: ignore
 
 CHECKPOINT_PATH = BASE / "training" / "checkpoints" / "attention" / "latest_with_attention.pth"
 

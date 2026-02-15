@@ -18,21 +18,21 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
-from model import MobileNetV3UNetConvLSTMVideo
-from dataset import RainRemovalDataset
-from losses import CombinedVideoLoss
+from training.helpers.model import MobileNetV3UNetConvLSTMVideo
+from training.helpers.dataset import RainRemovalDataset
+from training.helpers.losses import CombinedVideoLoss
 
 # Paths
 BASE = Path(__file__).parent.parent
-sys.path.insert(0, str(BASE / "training"))
-CLEAN_DATA = BASE / "data_original"
-RAINY_DATA = BASE / "data_after_crapification_per_frame"
-CHECKPOINT_DIR = BASE / "checkpoints"
+sys.path.insert(0, str(BASE))
+CLEAN_DATA = BASE / "data" / "data_original"
+RAINY_DATA = BASE / "data" / "data_crapified_train"
+CHECKPOINT_DIR = BASE / "training" / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 # Resume from checkpoint flag
 RESUME_TRAINING = False
-RESUME_PATH = CHECKPOINT_DIR / "latest_stage1.pth"
+RESUME_PATH = CHECKPOINT_DIR / "stage1" / "latest_stage1.pth"
 
 # Stage-1 Hyperparameters
 BATCH_SIZE = 64
@@ -279,20 +279,20 @@ def main():
         }
 
         # latest
-        torch.save(checkpoint, CHECKPOINT_DIR / "latest_stage1.pth")
+        torch.save(checkpoint, CHECKPOINT_DIR / "stage1" / "latest_stage1.pth")
 
         # best
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            torch.save(checkpoint, CHECKPOINT_DIR / "best_stage1.pth")
+            torch.save(checkpoint, CHECKPOINT_DIR / "stage1" / "best_stage1.pth")
             print(f"✓ New best Stage-1 model saved (val_loss={val_loss:.6f})\n")
         else:
             patience_counter += 1
 
         # Occasional extra snapshot
         if (epoch + 1) % 5 == 0:
-            torch.save(checkpoint, CHECKPOINT_DIR / f"stage1_epoch_{epoch + 1}.pth")
+            torch.save(checkpoint, CHECKPOINT_DIR / "stage1" / f"stage1_epoch_{epoch + 1}.pth")
 
         # Early stopping
         if patience_counter >= EARLY_STOPPING_PATIENCE:
