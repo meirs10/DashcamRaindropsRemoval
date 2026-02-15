@@ -30,19 +30,19 @@ import torch.nn.functional as F
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "training"))
 
-from model import MobileNetV3UNetConvLSTMVideo
-from losses import CombinedVideoLoss
+from training.model import MobileNetV3UNetConvLSTMVideo
+from training.losses import CombinedVideoLoss
 
 # ------------------------------------------------------------------------------------
 # Paths and constants
 # ------------------------------------------------------------------------------------
-CLEAN_DATA = BASE / "data_original"
-RAINY_DATA = BASE / "data_crapified_test"
+CLEAN_DATA = BASE / "data"/ "data_original"
+RAINY_DATA = BASE / "data"/ "data_crapified_test"
 SPLIT_FILE = BASE / "crapification" / "scene_split.json"
 
 # Possible checkpoint locations
-CHECKPOINT_PATH_ROOT = BASE / "checkpoints" / "best_stage2.pth"
-CHECKPOINT_PATH_STAGE2 = BASE / "checkpoints" / "stage2" / "best_stage2.pth"
+CHECKPOINT_PATH_ROOT = BASE / "training"/ "checkpoints" / "best_stage2.pth"
+CHECKPOINT_PATH_STAGE2 = BASE / "training"/ "checkpoints" / "stage2" / "best_stage2.pth"
 
 OUTPUT_DIR = BASE / "test_results" / "stage2_test_tiled"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
