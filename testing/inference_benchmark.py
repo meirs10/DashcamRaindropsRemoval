@@ -13,12 +13,14 @@ from torch.amp import autocast
 # --------------------------------------------------------------------
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "training"))
-from training.model import MobileNetV3UNetConvLSTMVideo
+from training.helpers.model import MobileNetV3UNetConvLSTMVideo
 
 CHECKPOINT_PATH = BASE / "training" / "checkpoints" / "stage2" / "best_stage2.pth"
+
 RAINY_DIR = BASE / "data" / "data_crapified_test" / "scene_004" / "front-forward"
 CLEAN_DIR = BASE / "data" / "data_original" / "scene_004" / "images" / "front-forward"
-OUTPUT_DIR = BASE / "testing" / "test_results" / "scene_004_inference"
+
+OUTPUT_DIR = BASE / "test_results" / "scene_004_inference_benchmark"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TARGET_FPS = 33.0
