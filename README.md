@@ -23,7 +23,7 @@ The model is built on a **MobileNetV3-UNet** architecture, optimized for speed a
 
 ## 📂 Dataset
 This project utilizes high-quality urban driving sequences from the **Wayve Open Dataset**.
-- **Source**: [Wayve.ai Data](https://wayve.ai/data/)
+- **Source**: [WayveScenes101](https://wayve.ai/science/wayvescenes101/)
 - **Role**: The "Clean" frames from Wayve serve as the ground truth. Our pipeline artificially degrades them to create paired `(Rainy, Clean)` training samples.
 
 ---
@@ -77,15 +77,18 @@ python testing/testing.py
 
 ---
 
-## 📊 Results
+## 📊 Results (Stage 2)
 
-| Metric | Stage 1 (Baseline) | Stage 2 (Final) |
-| :--- | :---: | :---: |
-| **PSNR** | ~26 dB | **~30 dB** |
-| **SSIM** | ~0.82 | **~0.90** |
-| **FPS** | 35+ | **33+** |
+| Metric | Value |
+| :--- | :--- |
+| **Test Loss** | 0.1975 |
+| **Best Val Loss** | 0.1927 |
+| **MAE** | 0.0587 |
+| **MSE** | 0.0083 |
+| **PSNR** | **21.63 dB** |
+| **FPS** | **>33 FPS** |
 
-*Visual results show significant removal of occluding droplets while preserving road markings and traffic lights.*
+*Results evaluated on the test set using a 3x5 tiled inference strategy.*
 
 ---
 
