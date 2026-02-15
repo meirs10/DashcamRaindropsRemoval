@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
-CHECKPOINT_PATH = BASE / "checkpoints" / "latest_with_attention.pth"
+CHECKPOINT_PATH = BASE / "checkpoints" / "latest_convlstm.pth"
 
 checkpoint = torch.load(CHECKPOINT_PATH, map_location='cpu')
 

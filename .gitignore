@@ -203,4 +203,4 @@ docs/_build/
 data_after_crapification_per_video
 #test_results
 
-testing/test_results
+testing/inference
