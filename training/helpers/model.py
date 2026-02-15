@@ -8,7 +8,7 @@ Model definition for video rain removal.
 - Encoder can be fully frozen, including BatchNorm running stats.
 """
 
-from typing import Dict
+from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -256,15 +256,27 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
         print("=" * 60 + "\n")
 
     # ----- Forward -----
-    def forward(self, x):
+    def forward(
+            self,
+            x: torch.Tensor,
+            state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            return_state: bool = True,
+    ):
         """
         x: (B, T, C, H, W)
+        state: (h_state, c_state) where each is (B, hidden_dim, H', W') matching convlstm spatial size.
+        return_state: if True returns (y, new_state), else returns y only.
         """
         B, T, C, H, W = x.shape
         outputs = []
 
         encoder_has_trainable = any(p.requires_grad for p in self.encoder.parameters())
-        h_state, c_state = None, None
+
+        # Use provided state (for realtime persistence)
+        if state is None:
+            h_state, c_state = None, None
+        else:
+            h_state, c_state = state
 
         for t in range(T):
             frame = x[:, t]  # (B, C, H, W)
@@ -284,4 +296,9 @@ class MobileNetV3UNetConvLSTMVideo(nn.Module):
             out_frame = self.decoder(h_state, enc_feats, out_size=(H, W))
             outputs.append(out_frame.unsqueeze(1))
 
-        return torch.cat(outputs, dim=1)
+        y = torch.cat(outputs, dim=1)  # (B, T, 3, H, W)
+        new_state = (h_state, c_state)
+
+        if return_state:
+            return y, new_state
+        return y

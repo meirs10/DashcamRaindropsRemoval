@@ -1,0 +1,26 @@
+Frame 0/200: 199.87ms (5.0 FPS)
+Frame 10/200: 7.81ms (128.1 FPS)
+Frame 20/200: 8.97ms (111.5 FPS)
+Frame 30/200: 7.87ms (127.1 FPS)
+Frame 40/200: 7.84ms (127.6 FPS)
+Frame 50/200: 7.90ms (126.7 FPS)
+Frame 60/200: 7.88ms (126.9 FPS)
+Frame 70/200: 9.93ms (100.7 FPS)
+Frame 80/200: 10.52ms (95.1 FPS)
+Frame 90/200: 7.80ms (128.2 FPS)
+Frame 100/200: 10.73ms (93.2 FPS)
+Frame 110/200: 7.74ms (129.2 FPS)
+Frame 120/200: 7.71ms (129.8 FPS)
+Frame 130/200: 7.74ms (129.2 FPS)
+Frame 140/200: 9.74ms (102.7 FPS)
+Frame 150/200: 12.52ms (79.9 FPS)
+Frame 160/200: 13.15ms (76.0 FPS)
+Frame 170/200: 13.01ms (76.9 FPS)
+Frame 180/200: 13.27ms (75.3 FPS)
+Frame 190/200: 13.75ms (72.7 FPS)
+
+==============================
+AVERAGE LATENCY: 11.39 ms
+AVERAGE FPS:     87.79
+MEETS TARGET:    True
+==============================

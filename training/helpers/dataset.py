@@ -84,7 +84,7 @@ class RainRemovalDataset(Dataset):
 
         # ===== Determine scene split =====
         if split_file is None:
-            split_file = self.clean_base.parent / "crapification" / "scene_split.json"
+            split_file = self.clean_base.parent.parent / "crapification" / "helpers" / "scene_split.json"
 
         if Path(split_file).exists():
             print(f"📋 Loading scene split from: {split_file}")

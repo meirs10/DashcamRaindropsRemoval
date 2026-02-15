@@ -1,0 +1,12 @@
+{
+    "num_frames": 11000,
+    "num_tiles": 165000,
+    "mean_tile_loss": 0.22740063860064202,
+    "best_val_loss": 0.23673445284366607,
+    "mean_mae": 0.07671704999933189,
+    "mean_mse": 0.011581251936245032,
+    "mean_psnr_db": 19.730103752059076,
+    "use_persistent_state": true,
+    "reset_state_per_angle": true,
+    "temporal_weight_used": 0.0
+}

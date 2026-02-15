@@ -37,16 +37,15 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 sys.path.insert(0, str(BASE / "training"))
 
-from model import MobileNetV3UNetConvLSTMVideo
-from dataset import RainRemovalDataset
-from losses import CombinedVideoLoss
-from crapification.per_video_crapification_pipeline import main as run_crapification
+from training.helpers.model import MobileNetV3UNetConvLSTMVideo
+from training.helpers.dataset import RainRemovalDataset
+from training.helpers.losses import CombinedVideoLoss
 
 
 # Paths
-CLEAN_DATA = BASE / "data_original"
-RAINY_DATA = BASE / "data_after_crapification_per_video"  # video-based crapified data_original
-CHECKPOINT_DIR = BASE / "checkpoints"
+CLEAN_DATA = BASE / "data" / "data_original"
+RAINY_DATA = BASE / "data" / "data_crapified_test"  # video-based crapified data_original
+CHECKPOINT_DIR = BASE / "training" / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 STAGE2_START_CKPT = CHECKPOINT_DIR / "stage2" / "best_stage2.pth"
@@ -58,7 +57,7 @@ BEST_ATTENTION_CKPT = CHECKPOINT_DIR / "best_with_attention.pth"
 BATCH_SIZE = 1
 MAX_EPOCHS = 15
 LEARNING_RATE = 5e-5
-FRAMES_PER_CLIP = 128        # T > 1 for temporal training
+FRAMES_PER_CLIP = 96        # T > 1 for temporal training
 IMG_SIZE = (512, 512)
 NUM_WORKERS = 4
 
@@ -165,7 +164,7 @@ def main():
         hidden_dim=96,
         out_channels=3,
         use_pretrained_encoder=True,
-        freeze_encoder=False,  # Stage 2 / attention fine-tuning: encoder unfrozen
+        freeze_encoder=True,
     ).to(device)
 
     # Initialize lazy layers with dummy input (T = FRAMES_PER_CLIP)
@@ -214,7 +213,7 @@ def main():
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
         T_max=MAX_EPOCHS,  # full cosine schedule over 15 epochs
-        eta_min=0.0,       # you can set a floor if you want, e.g. 1e-6
+        eta_min=5e-6,
     )
 
     scaler = GradScaler("cuda" if device.type == "cuda" else "cpu")
@@ -264,16 +263,6 @@ def main():
 
         print(f"\nEpoch {epoch + 1}/{MAX_EPOCHS} – setting temporal delta = {criterion.delta:.4f}")
 
-        # -------------------- PERIODIC CRAPIFICATION --------------------
-        # At the beginning (already done) and every 3 epochs
-        if epoch != 0 and (epoch % 3 == 0):
-            print("=" * 60)
-            print(f"Epoch {epoch + 1}: regenerating crapification...")
-            print("=" * 60)
-            run_crapification()
-            print("✓ Crapification regenerated. Rebuilding dataloaders...")
-            train_loader, val_loader = create_dataloaders()
-
         # -------------------- TRAIN --------------------
         model.train()
         running_train_loss = 0.0
@@ -315,6 +304,10 @@ def main():
         model.eval()
         running_val_loss = 0.0
 
+        # 🔒 Use MAX temporal weight for validation (consistent metric)
+        train_delta = criterion.delta  # save training delta
+        criterion.delta = DELTA_MAX  # force max for evaluation
+
         with torch.no_grad():
             for rainy, clean in val_loader:
                 rainy = rainy.to(device)
@@ -325,6 +318,8 @@ def main():
                     loss, _ = criterion(output, clean)
 
                 running_val_loss += loss.item()
+
+        criterion.delta = train_delta  # restore training delta
 
         val_loss = running_val_loss / len(val_loader)
         val_losses.append(val_loss)
@@ -356,8 +351,9 @@ def main():
             "val_losses": val_losses,
         }
 
-        # latest attention checkpoint
-        torch.save(checkpoint, LATEST_ATTENTION_CKPT)
+        epoch_ckpt_path = CHECKPOINT_DIR / f"with_attention_epoch_{epoch + 1:02d}.pth"
+        torch.save(checkpoint, epoch_ckpt_path)
+        print(f"✓ Epoch checkpoint saved: {epoch_ckpt_path.name}")
 
         # best attention checkpoint
         if val_loss < best_val_loss:
