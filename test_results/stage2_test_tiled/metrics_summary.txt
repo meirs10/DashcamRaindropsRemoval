@@ -1,0 +1,8 @@
+Stage 2 TILED TEST results (same pipeline as overlapping_inference.py)
+Num frames             : 11000
+Num tiles              : 165000
+Train-style TEST loss  : 0.197459
+Best VAL loss          : 0.192665
+Mean MAE               : 0.058703
+Mean MSE               : 0.008331
+Mean PSNR (dB)         : 21.63
